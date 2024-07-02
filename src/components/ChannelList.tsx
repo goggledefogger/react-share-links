@@ -1,33 +1,23 @@
 // src/components/ChannelList.tsx
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-interface Channel {
-  id: string;
-  name: string;
-}
+import { useChannels } from '../hooks/useChannels';
 
 const ChannelList: React.FC = () => {
-  const [channels, setChannels] = useState<Channel[]>([
-    { id: '1', name: 'General' },
-    { id: '2', name: 'Tech News' },
-  ]);
+  // rename object to channels
+  const { channelList: channels, setChannelList, addChannel } = useChannels();
 
   const [newChannelName, setNewChannelName] = useState('');
 
-  const addChannel = () => {
+  const addChannelFromUI = () => {
     if (newChannelName.trim()) {
-      const newChannel: Channel = {
-        id: Date.now().toString(),
-        name: newChannelName.trim(),
-      };
-      setChannels([...channels, newChannel]);
+      addChannel(newChannelName);
       setNewChannelName('');
     }
   };
 
   const deleteChannel = (id: string) => {
-    setChannels(channels.filter((channel) => channel.id !== id));
+    setChannelList(channels.filter((channel) => channel.id !== id));
   };
 
   return (
@@ -48,7 +38,7 @@ const ChannelList: React.FC = () => {
           onChange={(e) => setNewChannelName(e.target.value)}
           placeholder="New channel name"
         />
-        <button onClick={addChannel}>Add Channel</button>
+        <button onClick={addChannelFromUI}>Add Channel</button>
       </div>
     </div>
   );
