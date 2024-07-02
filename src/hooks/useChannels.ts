@@ -22,6 +22,11 @@ function useChannels() {
     return JSON.parse(retrievedChannelListJson);
   }
 
+  function saveChannelsToStorage(channels: Channel[]) {
+    localStorage.setItem(localStorageChannelListKey, JSON.stringify(channels));
+    setChannelList(channels);
+  }
+
   function addChannel(newChannelName: string) {
     // existing channel list
     const newChannel: Channel = {
@@ -31,19 +36,14 @@ function useChannels() {
     // in the future call the API where the response includes the
     // new channel, for now use localStorage
     const updatedChannelList = [...channelList, newChannel];
-    localStorage.setItem(
-      localStorageChannelListKey,
-      JSON.stringify(updatedChannelList)
-    );
-
-    setChannelList(updatedChannelList);
+    saveChannelsToStorage(updatedChannelList);
   }
 
   function deleteChannel(channelId: string) {
     const updatedChannelList = channelList.filter(
       (channel: Channel) => channel.id !== channelId
     );
-    setChannelList(updatedChannelList);
+    saveChannelsToStorage(updatedChannelList);
   }
 
   function getChannel(channelId: string) {
