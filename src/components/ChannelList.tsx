@@ -5,19 +5,19 @@ import { useChannels } from '../hooks/useChannels';
 
 const ChannelList: React.FC = () => {
   // rename object to channels
-  const { channelList: channels, setChannelList, addChannel } = useChannels();
+  const { channelList: channels, addChannel, deleteChannel } = useChannels();
 
   const [newChannelName, setNewChannelName] = useState('');
 
-  const addChannelFromUI = () => {
+  const addChannelToList = () => {
     if (newChannelName.trim()) {
       addChannel(newChannelName);
       setNewChannelName('');
     }
   };
 
-  const deleteChannel = (id: string) => {
-    setChannelList(channels.filter((channel) => channel.id !== id));
+  const deleteChannelFromList = (id: string) => {
+    deleteChannel(id);
   };
 
   return (
@@ -27,7 +27,9 @@ const ChannelList: React.FC = () => {
         {channels.map((channel) => (
           <li key={channel.id}>
             <Link to={`/channel/${channel.id}`}>{channel.name}</Link>
-            <button onClick={() => deleteChannel(channel.id)}>Delete</button>
+            <button onClick={() => deleteChannelFromList(channel.id)}>
+              Delete
+            </button>
           </li>
         ))}
       </ul>
@@ -38,7 +40,7 @@ const ChannelList: React.FC = () => {
           onChange={(e) => setNewChannelName(e.target.value)}
           placeholder="New channel name"
         />
-        <button onClick={addChannelFromUI}>Add Channel</button>
+        <button onClick={addChannelToList}>Add Channel</button>
       </div>
     </div>
   );

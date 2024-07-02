@@ -19,7 +19,9 @@ function useChannels() {
     setChannelList([...channelList, newChannel]);
   }
 
-  function deleteChannel(newChannelName: string) {}
+  function deleteChannel(channelId: string) {
+    setChannelList(channelList.filter((channel) => channel.id !== channelId));
+  }
 
   return { channelList, setChannelList, addChannel, deleteChannel };
 }
