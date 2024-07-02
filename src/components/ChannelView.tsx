@@ -1,6 +1,7 @@
 // src/components/ChannelView.tsx
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useChannels } from '../hooks/useChannels';
 
 interface Url {
   id: string;
@@ -11,6 +12,9 @@ const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [urls, setUrls] = useState<Url[]>([]);
   const [newUrl, setNewUrl] = useState('');
+
+  const { getChannel } = useChannels();
+  const channel = getChannel(id || 'undefined');
 
   const addUrl = () => {
     if (newUrl.trim()) {
@@ -25,7 +29,7 @@ const ChannelView: React.FC = () => {
 
   return (
     <div>
-      <h2>Channel: {id}</h2>
+      <h2>Channel: {channel.name}</h2>
       <Link to="/">Back to Channels</Link>
       <ul>
         {urls.map((url) => (
