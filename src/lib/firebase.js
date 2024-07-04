@@ -2,7 +2,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { get } from 'http';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -13,8 +12,6 @@ const firebaseConfig = {
   messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
-
-console.log(firebaseConfig);
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

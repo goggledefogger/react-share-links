@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import ChannelList from './components/ChannelList';
 import ChannelView from './components/ChannelView';
+import Login from './components/Login';
 
 const App: React.FC = () => {
   return (
@@ -12,6 +13,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<ChannelList />} />
           <Route path="/channel/:id" element={<ChannelView />} />
+          <Route path="/login" element={<Login />} />
         </Routes>
       </div>
     </Router>
