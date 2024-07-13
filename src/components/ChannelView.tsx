@@ -42,9 +42,15 @@ const ChannelView: React.FC = () => {
     if (await deleteLink(linkId)) {
       setLinks((prevLinks) => prevLinks.filter((link) => link.id !== linkId));
     } else {
-      // Optionally, show an error message to the user
       console.error('Failed to delete link');
     }
+  };
+
+  const ensureHttps = (url: string) => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    return url;
   };
 
   if (!channel) {
@@ -76,7 +82,10 @@ const ChannelView: React.FC = () => {
       <ul>
         {links.map((link) => (
           <li key={link.id}>
-            <a href={link.url} target="_blank" rel="noopener noreferrer">
+            <a
+              href={ensureHttps(link.url)}
+              target="_blank"
+              rel="noopener noreferrer">
               {link.emoji} {link.url}
             </a>
             <p>
