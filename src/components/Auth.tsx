@@ -24,34 +24,39 @@ const Auth: React.FC = () => {
     const { email, password, username } = formData;
 
     try {
+      let userCredential;
       if (isSignUp) {
-        // Sign up logic
-        const userCredential = await createUserWithEmailAndPassword(
+        userCredential = await createUserWithEmailAndPassword(
           auth,
           email,
           password
         );
-        const user = userCredential.user;
-
-        // Create user profile
-        await setDoc(doc(db, 'users', user.uid), {
-          username,
-          email,
-        });
-
-        // Create initial app data
-        await setDoc(doc(db, 'appData', user.uid), {
-          channels: {},
-          subscriptions: [],
-          links: {},
-        });
-
-        console.log('User registered successfully');
       } else {
-        // Sign in logic
-        await signInWithEmailAndPassword(auth, email, password);
-        console.log('User signed in successfully');
+        userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
       }
+
+      const user = userCredential.user;
+
+      // Create or update user document
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          username: username || email.split('@')[0], // Use email prefix if no username provided
+          email: user.email,
+          createdAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      console.log(
+        isSignUp
+          ? 'User registered successfully'
+          : 'User signed in successfully'
+      );
     } catch (error) {
       console.error('Authentication error:', error);
       // Handle error (show message to user, etc.)

@@ -1,39 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useChannels } from '../hooks/useChannels';
-import { Channel } from '../types';
-
-interface Url {
-  id: string;
-  url: string;
-}
+import { Channel, Link } from '../types';
 
 const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [urls, setUrls] = useState<Url[]>([]);
-  const [newUrl, setNewUrl] = useState('');
   const [channel, setChannel] = useState<Channel | null>(null);
-  const { getChannel } = useChannels();
+  const [links, setLinks] = useState<Link[]>([]);
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [newLinkEmoji, setNewLinkEmoji] = useState('');
+  const [lastTimestamp, setLastTimestamp] = useState<number | undefined>(
+    undefined
+  );
+  const { getChannel, getChannelLinks, addLink } = useChannels();
 
   useEffect(() => {
-    const fetchChannel = async () => {
+    const fetchChannelAndLinks = async () => {
       if (id) {
         const fetchedChannel = await getChannel(id);
         setChannel(fetchedChannel);
+        const fetchedLinks = await getChannelLinks(id);
+        setLinks(fetchedLinks);
+        if (fetchedLinks.length > 0) {
+          setLastTimestamp(fetchedLinks[fetchedLinks.length - 1].createdAt);
+        }
       }
     };
 
-    fetchChannel();
-  }, [id, getChannel]);
+    fetchChannelAndLinks();
+  }, [id, getChannel, getChannelLinks]);
 
-  const addUrl = () => {
-    if (newUrl.trim()) {
-      const newUrlItem: Url = {
-        id: Date.now().toString(),
-        url: newUrl.trim(),
-      };
-      setUrls([...urls, newUrlItem]);
-      setNewUrl('');
+  const handleAddLink = async () => {
+    if (id && newLinkUrl.trim()) {
+      const newLink = await addLink(id, newLinkUrl, newLinkEmoji);
+      setLinks((prevLinks) => [newLink, ...prevLinks]);
+      setNewLinkUrl('');
+      setNewLinkEmoji('');
+    }
+  };
+
+  const loadMoreLinks = async () => {
+    if (id && lastTimestamp) {
+      const moreLinks = await getChannelLinks(id, 20, lastTimestamp);
+      setLinks((prevLinks) => [...prevLinks, ...moreLinks]);
+      if (moreLinks.length > 0) {
+        setLastTimestamp(moreLinks[moreLinks.length - 1].createdAt);
+      }
     }
   };
 
@@ -44,25 +56,38 @@ const ChannelView: React.FC = () => {
   return (
     <div>
       <h2>Channel: {channel.name}</h2>
-      <Link to="/">Back to Channels</Link>
-      <ul>
-        {urls.map((url) => (
-          <li key={url.id}>
-            <a href={url.url} target="_blank" rel="noopener noreferrer">
-              {url.url}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <p>{channel.description}</p>
+      <RouterLink to="/">Back to Channels</RouterLink>
       <div>
         <input
           type="text"
-          value={newUrl}
-          onChange={(e) => setNewUrl(e.target.value)}
+          value={newLinkUrl}
+          onChange={(e) => setNewLinkUrl(e.target.value)}
           placeholder="Enter a URL"
         />
-        <button onClick={addUrl}>Add URL</button>
+        <input
+          type="text"
+          value={newLinkEmoji}
+          onChange={(e) => setNewLinkEmoji(e.target.value)}
+          placeholder="Enter an emoji (optional)"
+          maxLength={2}
+        />
+        <button onClick={handleAddLink}>Add Link</button>
       </div>
+      <ul>
+        {links.map((link) => (
+          <li key={link.id}>
+            <a href={link.url} target="_blank" rel="noopener noreferrer">
+              {link.emoji} {link.url}
+            </a>
+            <p>
+              Added by: {link.username} at{' '}
+              {new Date(link.createdAt).toLocaleString()}
+            </p>
+          </li>
+        ))}
+      </ul>
+      {links.length >= 20 && <button onClick={loadMoreLinks}>Load More</button>}
     </div>
   );
 };
