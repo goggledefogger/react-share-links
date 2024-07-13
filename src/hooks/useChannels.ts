@@ -1,58 +1,74 @@
 import { useState, useEffect } from 'react';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  doc,
+  getDoc,
+} from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Channel } from '../types';
 
-// hook that provides a way to access the state
 function useChannels() {
-  const localStorageChannelListKey = 'channels';
-
   const [channelList, setChannelList] = useState<Channel[]>([]);
 
   useEffect(() => {
-    const channelListFromStorage = getChannelsFromStorage();
-    setChannelList(channelListFromStorage);
+    const fetchChannels = async () => {
+      const channelsCollection = collection(db, 'channels');
+      const channelSnapshot = await getDocs(channelsCollection);
+      const channelList = channelSnapshot.docs.map(
+        (doc) =>
+          ({
+            id: doc.id,
+            name: doc.data().name,
+          } as Channel)
+      );
+      setChannelList(channelList);
+    };
+
+    fetchChannels();
   }, []);
 
-  function getChannelsFromStorage() {
-    const retrievedChannelListJson = localStorage.getItem(
-      localStorageChannelListKey
-    );
-    if (!retrievedChannelListJson) {
-      return [];
+  async function addChannel(newChannelName: string) {
+    try {
+      const docRef = await addDoc(collection(db, 'channels'), {
+        name: newChannelName.trim(),
+      });
+      const newChannel: Channel = {
+        id: docRef.id,
+        name: newChannelName.trim(),
+      };
+      setChannelList((prevList) => [...prevList, newChannel]);
+    } catch (e) {
+      console.error('Error adding document: ', e);
     }
-    return JSON.parse(retrievedChannelListJson);
   }
 
-  function saveChannelsToStorage(channels: Channel[]) {
-    localStorage.setItem(localStorageChannelListKey, JSON.stringify(channels));
-    setChannelList(channels);
+  async function deleteChannel(channelId: string) {
+    try {
+      await deleteDoc(doc(db, 'channels', channelId));
+      setChannelList((prevList) =>
+        prevList.filter((channel) => channel.id !== channelId)
+      );
+    } catch (e) {
+      console.error('Error removing document: ', e);
+    }
   }
 
-  function addChannel(newChannelName: string) {
-    // existing channel list
-    const newChannel: Channel = {
-      id: Date.now().toString(),
-      name: newChannelName.trim(),
-    };
-    // in the future call the API where the response includes the
-    // new channel, for now use localStorage
-    const updatedChannelList = [...channelList, newChannel];
-    saveChannelsToStorage(updatedChannelList);
+  async function getChannel(channelId: string) {
+    const docRef = doc(db, 'channels', channelId);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return { id: docSnap.id, ...docSnap.data() } as Channel;
+    } else {
+      console.log('No such document!');
+      return null;
+    }
   }
 
-  function deleteChannel(channelId: string) {
-    const updatedChannelList = channelList.filter(
-      (channel: Channel) => channel.id !== channelId
-    );
-    saveChannelsToStorage(updatedChannelList);
-  }
-
-  function getChannel(channelId: string) {
-    return getChannelsFromStorage().filter(
-      (channel: Channel) => channel.id === channelId
-    )[0];
-  }
-
-  return { channelList, setChannelList, addChannel, deleteChannel, getChannel };
+  return { channelList, addChannel, deleteChannel, getChannel };
 }
 
 export { useChannels };

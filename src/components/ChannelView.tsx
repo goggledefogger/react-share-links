@@ -1,7 +1,7 @@
-// src/components/ChannelView.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useChannels } from '../hooks/useChannels';
+import { Channel } from '../types';
 
 interface Url {
   id: string;
@@ -12,9 +12,19 @@ const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [urls, setUrls] = useState<Url[]>([]);
   const [newUrl, setNewUrl] = useState('');
-
+  const [channel, setChannel] = useState<Channel | null>(null);
   const { getChannel } = useChannels();
-  const channel = getChannel(id || 'undefined');
+
+  useEffect(() => {
+    const fetchChannel = async () => {
+      if (id) {
+        const fetchedChannel = await getChannel(id);
+        setChannel(fetchedChannel);
+      }
+    };
+
+    fetchChannel();
+  }, [id, getChannel]);
 
   const addUrl = () => {
     if (newUrl.trim()) {
@@ -26,6 +36,10 @@ const ChannelView: React.FC = () => {
       setNewUrl('');
     }
   };
+
+  if (!channel) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div>
