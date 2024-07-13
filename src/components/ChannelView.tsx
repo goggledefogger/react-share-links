@@ -9,9 +9,6 @@ const ChannelView: React.FC = () => {
   const [links, setLinks] = useState<Link[]>([]);
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkEmoji, setNewLinkEmoji] = useState('');
-  const [lastTimestamp, setLastTimestamp] = useState<number | undefined>(
-    undefined
-  );
   const { getChannel, getChannelLinks, addLink } = useChannels();
 
   useEffect(() => {
@@ -21,30 +18,23 @@ const ChannelView: React.FC = () => {
         setChannel(fetchedChannel);
         const fetchedLinks = await getChannelLinks(id);
         setLinks(fetchedLinks);
-        if (fetchedLinks.length > 0) {
-          setLastTimestamp(fetchedLinks[fetchedLinks.length - 1].createdAt);
-        }
       }
     };
 
     fetchChannelAndLinks();
   }, [id, getChannel, getChannelLinks]);
 
-  const handleAddLink = async () => {
+  const handleAddLink = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (id && newLinkUrl.trim()) {
-      const newLink = await addLink(id, newLinkUrl, newLinkEmoji);
-      setLinks((prevLinks) => [newLink, ...prevLinks]);
-      setNewLinkUrl('');
-      setNewLinkEmoji('');
-    }
-  };
-
-  const loadMoreLinks = async () => {
-    if (id && lastTimestamp) {
-      const moreLinks = await getChannelLinks(id, 20, lastTimestamp);
-      setLinks((prevLinks) => [...prevLinks, ...moreLinks]);
-      if (moreLinks.length > 0) {
-        setLastTimestamp(moreLinks[moreLinks.length - 1].createdAt);
+      try {
+        const newLink = await addLink(id, newLinkUrl, newLinkEmoji);
+        setLinks((prevLinks) => [newLink, ...prevLinks]);
+        setNewLinkUrl('');
+        setNewLinkEmoji('');
+      } catch (error) {
+        console.error('Error adding link:', error);
+        // Optionally, show an error message to the user
       }
     }
   };
@@ -58,12 +48,13 @@ const ChannelView: React.FC = () => {
       <h2>Channel: {channel.name}</h2>
       <p>{channel.description}</p>
       <RouterLink to="/">Back to Channels</RouterLink>
-      <div>
+      <form onSubmit={handleAddLink}>
         <input
           type="text"
           value={newLinkUrl}
           onChange={(e) => setNewLinkUrl(e.target.value)}
           placeholder="Enter a URL"
+          required
         />
         <input
           type="text"
@@ -72,8 +63,8 @@ const ChannelView: React.FC = () => {
           placeholder="Enter an emoji (optional)"
           maxLength={2}
         />
-        <button onClick={handleAddLink}>Add Link</button>
-      </div>
+        <button type="submit">Add Link</button>
+      </form>
       <ul>
         {links.map((link) => (
           <li key={link.id}>
@@ -87,7 +78,6 @@ const ChannelView: React.FC = () => {
           </li>
         ))}
       </ul>
-      {links.length >= 20 && <button onClick={loadMoreLinks}>Load More</button>}
     </div>
   );
 };
