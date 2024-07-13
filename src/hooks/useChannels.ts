@@ -7,13 +7,13 @@ import {
   limit,
   startAfter,
   getDocs,
+  getDoc,
   addDoc,
   deleteDoc,
   doc,
-  getDoc,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { Channel, Link } from '../types';
+import { Channel, Link, User } from '../types';
 
 function useChannels() {
   const [channelList, setChannelList] = useState<Channel[]>([]);
@@ -79,6 +79,7 @@ function useChannels() {
       return null;
     }
   }
+
   async function getChannelLinks(
     channelId: string,
     limitCount = 20,
@@ -107,10 +108,20 @@ function useChannels() {
     if (!user) throw new Error('User must be logged in to add a link');
 
     try {
+      // Fetch the user's profile to get the username
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data() as User | undefined;
+
+      const username =
+        userData?.username ||
+        user.displayName ||
+        user.email?.split('@')[0] ||
+        'Anonymous';
+
       const newLink = {
         channelId,
         userId: user.uid,
-        username: user.displayName || 'Anonymous',
+        username,
         url: url.trim(),
         emoji,
         createdAt: Date.now(),
@@ -123,6 +134,16 @@ function useChannels() {
     }
   }
 
+  async function deleteLink(linkId: string) {
+    try {
+      await deleteDoc(doc(db, 'links', linkId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting link:', error);
+      return false;
+    }
+  }
+
   return {
     channelList,
     addChannel,
@@ -130,6 +151,7 @@ function useChannels() {
     getChannel,
     getChannelLinks,
     addLink,
+    deleteLink,
   };
 }
 

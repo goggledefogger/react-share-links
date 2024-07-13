@@ -9,7 +9,7 @@ const ChannelView: React.FC = () => {
   const [links, setLinks] = useState<Link[]>([]);
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkEmoji, setNewLinkEmoji] = useState('');
-  const { getChannel, getChannelLinks, addLink } = useChannels();
+  const { getChannel, getChannelLinks, addLink, deleteLink } = useChannels();
 
   useEffect(() => {
     const fetchChannelAndLinks = async () => {
@@ -34,8 +34,16 @@ const ChannelView: React.FC = () => {
         setNewLinkEmoji('');
       } catch (error) {
         console.error('Error adding link:', error);
-        // Optionally, show an error message to the user
       }
+    }
+  };
+
+  const handleDeleteLink = async (linkId: string) => {
+    if (await deleteLink(linkId)) {
+      setLinks((prevLinks) => prevLinks.filter((link) => link.id !== linkId));
+    } else {
+      // Optionally, show an error message to the user
+      console.error('Failed to delete link');
     }
   };
 
@@ -75,6 +83,7 @@ const ChannelView: React.FC = () => {
               Added by: {link.username} at{' '}
               {new Date(link.createdAt).toLocaleString()}
             </p>
+            <button onClick={() => handleDeleteLink(link.id)}>Delete</button>
           </li>
         ))}
       </ul>
