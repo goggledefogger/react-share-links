@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Channel, Link, User } from '../types';
+import { isWebUri } from 'valid-url';
 
 function useChannels() {
   const [channelList, setChannelList] = useState<Channel[]>([]);
@@ -40,12 +41,16 @@ function useChannels() {
     if (!user) throw new Error('User must be logged in to create a channel');
 
     try {
-      const newChannel = {
+      const newChannel: any = {
         name: channelName.trim(),
-        description: description?.trim(),
         createdBy: user.uid,
         createdAt: Date.now(),
       };
+
+      if (description) {
+        newChannel.description = description.trim();
+      }
+
       const docRef = await addDoc(collection(db, 'channels'), newChannel);
       const createdChannel: Channel = { id: docRef.id, ...newChannel };
       setChannelList((prevList) => [...prevList, createdChannel]);
@@ -107,8 +112,18 @@ function useChannels() {
     const user = auth.currentUser;
     if (!user) throw new Error('User must be logged in to add a link');
 
+    // Validate URL
+    const validatedUrl = validateAndFormatUrl(url);
+    if (!validatedUrl) {
+      throw new Error('Invalid URL provided');
+    }
+
+    // Validate emoji (optional)
+    if (emoji && !isValidEmoji(emoji)) {
+      throw new Error('Invalid emoji provided');
+    }
+
     try {
-      // Fetch the user's profile to get the username
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data() as User | undefined;
 
@@ -122,8 +137,8 @@ function useChannels() {
         channelId,
         userId: user.uid,
         username,
-        url: url.trim(),
-        emoji,
+        url: validatedUrl,
+        emoji: emoji || null,
         createdAt: Date.now(),
       };
       const docRef = await addDoc(collection(db, 'links'), newLink);
@@ -132,6 +147,26 @@ function useChannels() {
       console.error('Error adding link: ', e);
       throw e;
     }
+  }
+
+  function validateAndFormatUrl(url: string): string | null {
+    // Ensure the URL starts with a protocol
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    // Use valid-url library to check if it's a valid web URI
+    if (isWebUri(url)) {
+      return url;
+    }
+
+    return null;
+  }
+
+  function isValidEmoji(emoji: string): boolean {
+    // Basic emoji validation (you might want to use a library for more comprehensive validation)
+    const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)$/u;
+    return emojiRegex.test(emoji) && emoji.length === 1;
   }
 
   async function deleteLink(linkId: string) {

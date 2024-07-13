@@ -20,6 +20,9 @@ importers:
       '@types/react-router-dom':
         specifier: ^5.3.3
         version: 5.3.3
+      '@types/valid-url':
+        specifier: ^1.0.7
+        version: 1.0.7
       firebase:
         specifier: ^10.12.3
         version: 10.12.3
@@ -38,6 +41,9 @@ importers:
       typescript:
         specifier: ^4.9.5
         version: 4.9.5
+      valid-url:
+        specifier: ^1.0.9
+        version: 1.0.9
       web-vitals:
         specifier: ^2.1.4
         version: 2.1.4
@@ -1585,6 +1591,9 @@ packages:
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
+  '@types/valid-url@1.0.7':
+    resolution: {integrity: sha512-tgsWVG80dM5PVEBSbXUttPJTBCOo0IKbBh4R4z/SHsC5C81A3aaUH4fsbj+JYk7fopApU/Mao1c0EWTE592TSg==}
 
   '@types/ws@8.5.10':
     resolution: {integrity: sha512-vmQSUcfalpIq0R9q7uTo2lXs6eGIpt9wtnLdMv9LVpIjCA/+ufZRozlVoVelIYixx1ugCBKDhn89vnsEGOCx9A==}
@@ -5513,6 +5522,9 @@ packages:
     resolution: {integrity: sha512-FGtKtv3xIpR6BYhvgH8MI/y78oT7d8Au3ww4QIxymrCtZEh5b8gCw2siywE+puhEmuWKDtmfrvF5UlB298ut3w==}
     engines: {node: '>=10.12.0'}
 
+  valid-url@1.0.9:
+    resolution: {integrity: sha512-QQDsV8OnSf5Uc30CKSwG9lnhMPe6exHtTXLRYX8uMwKENy640pU+2BgBL0LRbDh/eYRahNCS7aewCx0wf3NYVA==}
+
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
@@ -7803,6 +7815,8 @@ snapshots:
       '@types/jest': 27.5.2
 
   '@types/trusted-types@2.0.7': {}
+
+  '@types/valid-url@1.0.7': {}
 
   '@types/ws@8.5.10':
     dependencies:
@@ -12487,6 +12501,8 @@ snapshots:
       '@types/istanbul-lib-coverage': 2.0.6
       convert-source-map: 1.9.0
       source-map: 0.7.4
+
+  valid-url@1.0.9: {}
 
   vary@1.1.2: {}
 
