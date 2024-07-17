@@ -15,6 +15,8 @@ import Toast from './components/Toast';
 const App: React.FC = () => {
   const { user, profile, loading, error } = useAuthUser();
 
+  console.log('App render:', { user, profile, loading, error });
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -27,7 +29,24 @@ const App: React.FC = () => {
           <div className="user">
             {user ? `Welcome, ${profile?.username || user.email}` : 'Guest'}
           </div>
-          <Routes>{/* ... existing routes ... */}</Routes>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                user ? <ChannelList /> : <Navigate to="/login" replace />
+              }
+            />
+            <Route
+              path="/channel/:id"
+              element={
+                user ? <ChannelView /> : <Navigate to="/login" replace />
+              }
+            />
+            <Route
+              path="/login"
+              element={user ? <Navigate to="/" replace /> : <Auth />}
+            />
+          </Routes>
           <Toast />
         </div>
       </Router>

@@ -47,10 +47,5 @@
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
     "@types/testing-library__jest-dom": "^5.14.9"
-  },
-  "jest": {
-    "setupFilesAfterEnv": [
-      "<rootDir>/src/setupTests.ts"
-    ]
   }
 }

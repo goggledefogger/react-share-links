@@ -6,7 +6,6 @@ import { auth, db } from '../lib/firebase';
 interface UserProfile {
   username: string;
   email: string;
-  createdAt: string;
 }
 
 interface AuthUser {
@@ -16,7 +15,7 @@ interface AuthUser {
   error: string | null;
 }
 
-export function useAuthUser(): AuthUser {
+export function useAuthUser() {
   const [authUser, setAuthUser] = useState<AuthUser>({
     user: null,
     profile: null,
@@ -64,7 +63,11 @@ export function useAuthUser(): AuthUser {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
 
   return authUser;

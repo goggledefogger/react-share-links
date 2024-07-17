@@ -5,9 +5,14 @@ import {
 } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { useToast } from '../contexts/ToastContext';
 
 const Auth: React.FC = () => {
+  console.log('Auth render');
+
+  const { showToast } = useToast();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -21,6 +26,7 @@ const Auth: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsLoading(true);
     const { email, password, username } = formData;
 
     try {
@@ -41,25 +47,30 @@ const Auth: React.FC = () => {
 
       const user = userCredential.user;
 
-      // Create or update user document
       await setDoc(
         doc(db, 'users', user.uid),
         {
-          username: username || email.split('@')[0], // Use email prefix if no username provided
+          username: username || email.split('@')[0],
           email: user.email,
           createdAt: new Date().toISOString(),
         },
         { merge: true }
       );
 
-      console.log(
-        isSignUp
+      showToast({
+        message: isSignUp
           ? 'User registered successfully'
-          : 'User signed in successfully'
-      );
+          : 'User signed in successfully',
+        type: 'success',
+      });
     } catch (error) {
       console.error('Authentication error:', error);
-      // Handle error (show message to user, etc.)
+      showToast({
+        message: `Authentication failed: ${(error as Error).message}`,
+        type: 'error',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -93,9 +104,11 @@ const Auth: React.FC = () => {
             required
           />
         )}
-        <button type="submit">{isSignUp ? 'Sign Up' : 'Sign In'}</button>
+        <button type="submit" disabled={isLoading}>
+          {isLoading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
+        </button>
       </form>
-      <button onClick={() => setIsSignUp(!isSignUp)}>
+      <button onClick={() => setIsSignUp(!isSignUp)} disabled={isLoading}>
         {isSignUp
           ? 'Already have an account? Sign In'
           : "Don't have an account? Sign Up"}
