@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useChannels } from '../hooks/useChannels';
 import { Channel, Link } from '../types';
+import { useToast } from '../contexts/ToastContext';
 
 const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -10,6 +11,7 @@ const ChannelView: React.FC = () => {
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkEmoji, setNewLinkEmoji] = useState('');
   const { getChannel, getChannelLinks, addLink, deleteLink } = useChannels();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const fetchChannelAndLinks = async () => {
@@ -32,8 +34,10 @@ const ChannelView: React.FC = () => {
         setLinks((prevLinks) => [newLink, ...prevLinks]);
         setNewLinkUrl('');
         setNewLinkEmoji('');
+        showToast({ message: 'Link added successfully', type: 'success' });
       } catch (error) {
         console.error('Error adding link:', error);
+        showToast({ message: 'Failed to add link', type: 'error' });
       }
     }
   };
