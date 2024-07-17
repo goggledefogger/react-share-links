@@ -22,9 +22,6 @@ describe('Auth Component', () => {
       </ToastProvider>
     );
 
-    // Debug: Log the rendered component
-    debug();
-
     // Try to find inputs by their placeholder
     const emailInput = screen.getByPlaceholderText('Email');
     const passwordInput = screen.getByPlaceholderText('Password');
