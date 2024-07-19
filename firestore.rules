@@ -15,13 +15,13 @@ service cloud.firestore {
     }
 
     match /channels/{channelId} {
-      allow read: if isAuthenticated();
+      allow read: if true; // Allow public read access
       allow create: if isAuthenticated();
       allow update, delete: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
     }
 
     match /links/{linkId} {
-      allow read: if isAuthenticated();
+      allow read: if true; // Allow public read access
       allow create: if isAuthenticated();
       allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }

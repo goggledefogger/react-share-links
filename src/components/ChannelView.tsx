@@ -1,16 +1,20 @@
+// src/components/ChannelView.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useChannels } from '../hooks/useChannels';
 import { Channel, Link } from '../types';
 import { useToast } from '../contexts/ToastContext';
+import Form from './common/Form';
+import EmojiPicker from 'emoji-picker-react';
+import './ChannelView.css';
 
 const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [channel, setChannel] = useState<Channel | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
-  const [newLinkUrl, setNewLinkUrl] = useState('');
-  const [newLinkEmoji, setNewLinkEmoji] = useState('');
-  const { getChannel, getChannelLinks, addLink, deleteLink } = useChannels();
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const { getChannel, getChannelLinks, addLink, deleteLink, addEmojiReaction } =
+    useChannels();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -26,14 +30,18 @@ const ChannelView: React.FC = () => {
     fetchChannelAndLinks();
   }, [id, getChannel, getChannelLinks]);
 
-  const handleAddLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (id && newLinkUrl.trim()) {
+  const handleAddLink = async (formData: { [key: string]: string }) => {
+    const { url } = formData;
+    if (id && url.trim()) {
       try {
-        const newLink = await addLink(id, newLinkUrl, newLinkEmoji);
-        setLinks((prevLinks) => [newLink, ...prevLinks]);
-        setNewLinkUrl('');
-        setNewLinkEmoji('');
+        const newLink = await addLink(id, url);
+        setLinks((prevLinks) => {
+          const updatedLinks = [newLink, ...prevLinks];
+          return updatedLinks.filter(
+            (link, index, self) =>
+              index === self.findIndex((t) => t.id === link.id)
+          );
+        });
         showToast({ message: 'Link added successfully', type: 'success' });
       } catch (error) {
         console.error('Error adding link:', error);
@@ -45,58 +53,101 @@ const ChannelView: React.FC = () => {
   const handleDeleteLink = async (linkId: string) => {
     if (await deleteLink(linkId)) {
       setLinks((prevLinks) => prevLinks.filter((link) => link.id !== linkId));
+      showToast({ message: 'Link deleted successfully', type: 'success' });
     } else {
-      console.error('Failed to delete link');
+      showToast({ message: 'Failed to delete link', type: 'error' });
     }
   };
 
-  const ensureHttps = (url: string) => {
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return `https://${url}`;
+  const handleEmojiClick = async (linkId: string, emojiObject: any) => {
+    try {
+      await addEmojiReaction(linkId, emojiObject.emoji);
+      setLinks((prevLinks) =>
+        prevLinks.map((link) =>
+          link.id === linkId
+            ? {
+                ...link,
+                reactions: [...(link.reactions || []), emojiObject.emoji],
+              }
+            : link
+        )
+      );
+      setShowEmojiPicker(null);
+    } catch (error) {
+      console.error('Error adding emoji reaction:', error);
+      showToast({ message: 'Failed to add emoji reaction', type: 'error' });
     }
-    return url;
   };
 
   if (!channel) {
-    return <div>Loading...</div>;
+    return <div className="loading">Loading...</div>;
   }
 
   return (
-    <div>
-      <h2>Channel: {channel.name}</h2>
-      <p>{channel.description}</p>
-      <RouterLink to="/">Back to Channels</RouterLink>
-      <form onSubmit={handleAddLink}>
-        <input
-          type="text"
-          value={newLinkUrl}
-          onChange={(e) => setNewLinkUrl(e.target.value)}
-          placeholder="Enter a URL"
-          required
+    <div className="channel-view">
+      <h2 className="channel-title">Channel: {channel.name}</h2>
+      <RouterLink to="/" className="back-link">
+        Back to Channels
+      </RouterLink>
+      <div className="add-link-form">
+        <h3>Add New Link</h3>
+        <Form
+          fields={[
+            {
+              name: 'url',
+              type: 'text',
+              placeholder: 'Enter a URL',
+              required: true,
+            },
+          ]}
+          onSubmit={handleAddLink}
+          submitButtonText="Add Link"
+          submitButtonClass="btn btn-primary"
         />
-        <input
-          type="text"
-          value={newLinkEmoji}
-          onChange={(e) => setNewLinkEmoji(e.target.value)}
-          placeholder="Enter an emoji (optional)"
-          maxLength={2}
-        />
-        <button type="submit">Add Link</button>
-      </form>
-      <ul>
+      </div>
+      <ul className="link-list">
         {links.map((link) => (
-          <li key={link.id}>
+          <li key={link.id} className="link-item">
             <a
-              href={ensureHttps(link.url)}
+              href={link.url}
               target="_blank"
-              rel="noopener noreferrer">
-              {link.emoji} {link.url}
+              rel="noopener noreferrer"
+              className="link-url">
+              {link.url}
             </a>
-            <p>
+            <p className="link-info">
               Added by: {link.username} at{' '}
               {new Date(link.createdAt).toLocaleString()}
             </p>
-            <button onClick={() => handleDeleteLink(link.id)}>Delete</button>
+            <div className="link-actions">
+              <button
+                onClick={() => setShowEmojiPicker(link.id)}
+                className="btn btn-secondary">
+                Add Reaction
+              </button>
+              <button
+                onClick={() => handleDeleteLink(link.id)}
+                className="btn btn-danger">
+                Delete
+              </button>
+            </div>
+            {showEmojiPicker === link.id && (
+              <div className="emoji-picker-container">
+                <EmojiPicker
+                  onEmojiClick={(emojiObject) =>
+                    handleEmojiClick(link.id, emojiObject)
+                  }
+                />
+              </div>
+            )}
+            <div className="reactions">
+              {link.reactions &&
+                link.reactions.map((emoji, index) => (
+                  <span key={index} className="reaction">
+                    {emoji}
+                  </span>
+                ))}
+            </div>
           </li>
         ))}
       </ul>

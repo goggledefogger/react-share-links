@@ -1,5 +1,6 @@
+// src/hooks/useAuthUser.ts
 import { useState, useEffect } from 'react';
-import { User } from 'firebase/auth';
+import { User, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
@@ -63,12 +64,26 @@ export function useAuthUser() {
       }
     });
 
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
+    return () => unsubscribe();
   }, []);
 
-  return authUser;
+  const signOutUser = async () => {
+    try {
+      await signOut(auth);
+      setAuthUser({
+        user: null,
+        profile: null,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      setAuthUser((prev) => ({
+        ...prev,
+        error: 'Failed to sign out',
+      }));
+    }
+  };
+
+  return { ...authUser, signOutUser };
 }

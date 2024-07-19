@@ -1,3 +1,4 @@
+// src/components/Auth.tsx
 import React, { useState } from 'react';
 import {
   createUserWithEmailAndPassword,
@@ -6,27 +7,14 @@ import {
 import { setDoc, doc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { useToast } from '../contexts/ToastContext';
+import Form from './common/Form';
+import './Auth.css';
 
 const Auth: React.FC = () => {
-  console.log('Auth render');
-
   const { showToast } = useToast();
   const [isSignUp, setIsSignUp] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    username: '',
-  });
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsLoading(true);
+  const handleSubmit = async (formData: { [key: string]: string }) => {
     const { email, password, username } = formData;
 
     try {
@@ -47,15 +35,17 @@ const Auth: React.FC = () => {
 
       const user = userCredential.user;
 
-      await setDoc(
-        doc(db, 'users', user.uid),
-        {
-          username: username || email.split('@')[0],
-          email: user.email,
-          createdAt: new Date().toISOString(),
-        },
-        { merge: true }
-      );
+      if (isSignUp) {
+        await setDoc(
+          doc(db, 'users', user.uid),
+          {
+            username: username || email.split('@')[0],
+            email: user.email,
+            createdAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
 
       showToast({
         message: isSignUp
@@ -69,46 +59,32 @@ const Auth: React.FC = () => {
         message: `Authentication failed: ${(error as Error).message}`,
         type: 'error',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
+  const fields = [
+    { name: 'email', type: 'email', placeholder: 'Email', required: true },
+    {
+      name: 'password',
+      type: 'password',
+      placeholder: 'Password',
+      required: true,
+    },
+    ...(isSignUp
+      ? [{ name: 'username', type: 'text', placeholder: 'Username (optional)' }]
+      : []),
+  ];
+
   return (
-    <div>
+    <div className="auth-container">
       <h2>{isSignUp ? 'Sign Up' : 'Sign In'}</h2>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleInputChange}
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleInputChange}
-          required
-        />
-        {isSignUp && (
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleInputChange}
-            required
-          />
-        )}
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
-        </button>
-      </form>
-      <button onClick={() => setIsSignUp(!isSignUp)} disabled={isLoading}>
+      <Form
+        fields={fields}
+        onSubmit={handleSubmit}
+        submitButtonText={isSignUp ? 'Sign Up' : 'Sign In'}
+        submitButtonClass="btn btn-primary"
+      />
+      <button className="auth-toggle" onClick={() => setIsSignUp(!isSignUp)}>
         {isSignUp
           ? 'Already have an account? Sign In'
           : "Don't have an account? Sign Up"}

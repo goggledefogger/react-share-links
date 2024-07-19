@@ -11,6 +11,8 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  updateDoc,
+  arrayUnion,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Channel, Link, User } from '../types';
@@ -118,11 +120,6 @@ function useChannels() {
       throw new Error('Invalid URL provided');
     }
 
-    // Validate emoji (optional)
-    if (emoji && !isValidEmoji(emoji)) {
-      throw new Error('Invalid emoji provided');
-    }
-
     try {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data() as User | undefined;
@@ -141,6 +138,7 @@ function useChannels() {
         emoji: emoji || null,
         createdAt: Date.now(),
       };
+
       const docRef = await addDoc(collection(db, 'links'), newLink);
       return { id: docRef.id, ...newLink } as Link;
     } catch (e) {
@@ -179,6 +177,19 @@ function useChannels() {
     }
   }
 
+  async function addEmojiReaction(linkId: string, emoji: string) {
+    try {
+      const linkRef = doc(db, 'links', linkId);
+      await updateDoc(linkRef, {
+        reactions: arrayUnion(emoji),
+      });
+      return true;
+    } catch (e) {
+      console.error('Error adding emoji reaction: ', e);
+      throw e;
+    }
+  }
+
   return {
     channelList,
     addChannel,
@@ -187,6 +198,7 @@ function useChannels() {
     getChannelLinks,
     addLink,
     deleteLink,
+    addEmojiReaction,
   };
 }
 

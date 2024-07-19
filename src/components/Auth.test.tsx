@@ -2,7 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Auth from './Auth';
 import { ToastProvider } from '../contexts/ToastContext';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from 'firebase/auth';
 
 jest.mock('firebase/auth');
 jest.mock('../lib/firebase', () => ({
@@ -10,44 +13,72 @@ jest.mock('../lib/firebase', () => ({
   db: {},
 }));
 
+// Mock ToastContext
+const mockShowToast = jest.fn();
+jest.mock('../contexts/ToastContext', () => ({
+  ...jest.requireActual('../contexts/ToastContext'),
+  useToast: () => ({ showToast: mockShowToast }),
+}));
+
+const renderAuth = () => {
+  return render(
+    <ToastProvider>
+      <Auth />
+    </ToastProvider>
+  );
+};
+
 describe('Auth Component', () => {
-  it('shows error message on invalid sign in', async () => {
-    (signInWithEmailAndPassword as jest.Mock).mockRejectedValue(
-      new Error('Invalid email or password')
-    );
+  test('allows user to sign in', async () => {
+    (signInWithEmailAndPassword as jest.Mock).mockResolvedValue({
+      user: { uid: '123' },
+    });
 
-    const { container, debug } = render(
-      <ToastProvider>
-        <Auth />
-      </ToastProvider>
-    );
+    renderAuth();
 
-    // Try to find inputs by their placeholder
-    const emailInput = screen.getByPlaceholderText('Email');
-    const passwordInput = screen.getByPlaceholderText('Password');
-
-    fireEvent.change(emailInput, {
+    fireEvent.change(screen.getByPlaceholderText('Email'), {
       target: { value: 'test@example.com' },
     });
-    fireEvent.change(passwordInput, {
-      target: { value: 'wrongpassword' },
+    fireEvent.change(screen.getByPlaceholderText('Password'), {
+      target: { value: 'password123' },
     });
-
-    fireEvent.click(screen.getByRole('button', { name: /Sign In/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign In' }));
 
     await waitFor(() => {
       expect(signInWithEmailAndPassword).toHaveBeenCalledWith(
         expect.anything(),
         'test@example.com',
-        'wrongpassword'
+        'password123'
       );
     });
+  });
 
-    // Wait for the button to be re-enabled
+  test('allows user to switch to sign up mode and create account', async () => {
+    (createUserWithEmailAndPassword as jest.Mock).mockResolvedValue({
+      user: { uid: '123' },
+    });
+
+    renderAuth();
+
+    fireEvent.click(screen.getByText("Don't have an account? Sign Up"));
+
+    fireEvent.change(screen.getByPlaceholderText('Email'), {
+      target: { value: 'newuser@example.com' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Password'), {
+      target: { value: 'newpassword123' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Username'), {
+      target: { value: 'newuser' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign Up' }));
+
     await waitFor(() => {
-      expect(
-        screen.getByRole('button', { name: /Sign In/i })
-      ).not.toBeDisabled();
+      expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(
+        expect.anything(),
+        'newuser@example.com',
+        'newpassword123'
+      );
     });
   });
 });

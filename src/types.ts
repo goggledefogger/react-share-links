@@ -12,9 +12,8 @@ export interface Link {
   userId: string;
   username: string;
   url: string;
-  title?: string;
-  emoji?: string;
   createdAt: number;
+  reactions?: string[];
 }
 
 export interface Channel {

@@ -1,47 +1,51 @@
 // src/components/ChannelList.tsx
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useChannels } from '../hooks/useChannels';
 import { Channel } from '../types';
+import Form from './common/Form';
+import './ChannelList.css';
 
 const ChannelList: React.FC = () => {
-  // rename channelList to channels just to show how that works
   const { channelList: channels, addChannel, deleteChannel } = useChannels();
 
-  const [newChannelName, setNewChannelName] = useState('');
-
-  const addChannelToList = () => {
-    if (newChannelName.trim()) {
-      addChannel(newChannelName);
-      setNewChannelName('');
+  const handleAddChannel = (formData: { [key: string]: string }) => {
+    const { channelName } = formData;
+    if (channelName.trim()) {
+      addChannel(channelName);
     }
   };
 
-  const deleteChannelFromList = (id: string) => {
-    deleteChannel(id);
-  };
-
   return (
-    <div>
+    <div className="channel-list">
       <h2>Channels</h2>
       <ul>
         {channels.map((channel: Channel) => (
           <li key={channel.id}>
             <Link to={`/channel/${channel.id}`}>{channel.name}</Link>
-            <button onClick={() => deleteChannelFromList(channel.id)}>
+            <button
+              className="btn btn-danger"
+              onClick={() => deleteChannel(channel.id)}
+              aria-label={`Delete ${channel.name} channel`}>
               Delete
             </button>
           </li>
         ))}
       </ul>
-      <div>
-        <input
-          type="text"
-          value={newChannelName}
-          onChange={(e) => setNewChannelName(e.target.value)}
-          placeholder="New channel name"
+      <div className="add-channel-form">
+        <h3>Add New Channel</h3>
+        <Form
+          fields={[
+            {
+              name: 'channelName',
+              type: 'text',
+              placeholder: 'New channel name',
+              required: true,
+            },
+          ]}
+          onSubmit={handleAddChannel}
+          submitButtonText="Add Channel"
         />
-        <button onClick={addChannelToList}>Add Channel</button>
       </div>
     </div>
   );

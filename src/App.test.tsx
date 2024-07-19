@@ -1,19 +1,56 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
+import { useAuthUser } from './hooks/useAuthUser';
 
-jest.mock('./hooks/useAuthUser', () => ({
-  useAuthUser: () => ({
-    user: null,
-    profile: null,
-    loading: false,
-    error: null,
-  }),
+// Mock the entire react-router-dom module
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => jest.fn(),
 }));
 
-test('renders without crashing', async () => {
-  render(<App />);
+jest.mock('./hooks/useAuthUser');
+jest.mock('./components/ChannelList', () => () => <div>Channel List</div>);
+jest.mock('./components/Auth', () => () => <div>Auth Component</div>);
 
-  // Check for the main content
-  expect(screen.getByText(/Share Links/i)).toBeInTheDocument();
+describe('App Component', () => {
+  test('shows auth component when user is not logged in', () => {
+    (useAuthUser as jest.Mock).mockReturnValue({
+      user: null,
+      loading: false,
+    });
+
+    render(<App />);
+
+    expect(screen.getByText('Auth Component')).toBeInTheDocument();
+  });
+
+  test('shows channel list when user is logged in', () => {
+    (useAuthUser as jest.Mock).mockReturnValue({
+      user: { uid: '123', email: 'test@example.com' },
+      profile: { username: 'testuser' },
+      loading: false,
+      signOutUser: jest.fn(),
+    });
+
+    render(<App />);
+
+    expect(screen.getByText('Channel List')).toBeInTheDocument();
+    expect(screen.getByText('Welcome, testuser')).toBeInTheDocument();
+  });
+
+  test('allows user to sign out', () => {
+    const mockSignOut = jest.fn();
+    (useAuthUser as jest.Mock).mockReturnValue({
+      user: { uid: '123', email: 'test@example.com' },
+      profile: { username: 'testuser' },
+      loading: false,
+      signOutUser: mockSignOut,
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByText('Sign Out'));
+    expect(mockSignOut).toHaveBeenCalled();
+  });
 });
