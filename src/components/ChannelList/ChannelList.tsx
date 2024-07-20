@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useChannels } from '../hooks/useChannels';
-import { Channel } from '../types';
-import Form from './common/Form';
+import { useChannels } from '../../hooks/useChannels';
+import { Channel } from '../../types';
+import Form from '../common/Form';
 import './ChannelList.css';
 
 const ChannelList: React.FC = () => {
@@ -16,13 +16,11 @@ const ChannelList: React.FC = () => {
   };
 
   return (
-    <div className="channel-list bg-surface shadow rounded p-4">
-      <h2 className="text-primary">Channels</h2>
+    <div className="channel-list">
+      <h2>Channels</h2>
       <ul className="channel-items">
         {channelList.map((channel: Channel) => (
-          <li
-            key={channel.id}
-            className="channel-item bg-surface shadow rounded p-4 m-4">
+          <li key={channel.id} className="channel-item">
             <Link to={`/channel/${channel.id}`} className="channel-link">
               {channel.name}
             </Link>
@@ -35,8 +33,8 @@ const ChannelList: React.FC = () => {
           </li>
         ))}
       </ul>
-      <div className="add-channel-form bg-surface shadow rounded p-4">
-        <h3 className="text-secondary">Add New Channel</h3>
+      <div className="add-channel-form">
+        <h3>Add New Channel</h3>
         <Form
           fields={[
             {

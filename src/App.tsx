@@ -5,12 +5,12 @@ import {
   Routes,
   Navigate,
 } from 'react-router-dom';
-import ChannelList from './components/ChannelList';
-import ChannelView from './components/ChannelView';
-import Auth from './components/Auth';
+import ChannelList from './components/ChannelList/ChannelList';
+import ChannelView from './components/ChannelView/ChannelView';
+import Auth from './components/Auth/Auth';
 import { useAuthUser } from './hooks/useAuthUser';
 import { ToastProvider } from './contexts/ToastContext';
-import Toast from './components/Toast';
+import Toast from './components/Toast/Toast';
 import './styles/variables.css';
 import './styles/animations.css';
 import './App.css';

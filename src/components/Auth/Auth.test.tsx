@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Auth from './Auth';
-import { ToastProvider } from '../contexts/ToastContext';
+import { ToastProvider } from '../../contexts/ToastContext';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -16,7 +16,7 @@ jest.mock('../lib/firebase', () => ({
 // Mock ToastContext
 const mockShowToast = jest.fn();
 jest.mock('../contexts/ToastContext', () => ({
-  ...jest.requireActual('../contexts/ToastContext'),
+  ...jest.requireActual('../../contexts/ToastContext'),
   useToast: () => ({ showToast: mockShowToast }),
 }));
 

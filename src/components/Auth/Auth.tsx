@@ -4,9 +4,9 @@ import {
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
-import { useToast } from '../contexts/ToastContext';
-import Form from './common/Form';
+import { auth, db } from '../../lib/firebase';
+import { useToast } from '../../contexts/ToastContext';
+import Form from '../common/Form';
 import './Auth.css';
 
 const Auth: React.FC = () => {

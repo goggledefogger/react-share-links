@@ -1,10 +1,10 @@
 // src/components/ChannelView.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
-import { useChannels } from '../hooks/useChannels';
-import { Channel, Link } from '../types';
-import { useToast } from '../contexts/ToastContext';
-import Form from './common/Form';
+import { useChannels } from '../../hooks/useChannels';
+import { Channel, Link } from '../../types';
+import { useToast } from '../../contexts/ToastContext';
+import Form from '../common/Form';
 import EmojiPicker from 'emoji-picker-react';
 import './ChannelView.css';
 
