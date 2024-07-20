@@ -1,17 +1,5 @@
-:root {
-  --primary-color: #3498db;
-  --primary-dark: #2980b9;
-  --secondary-color: #2ecc71;
-  --secondary-dark: #27ae60;
-  --background-color: #ecf0f1;
-  --text-color: #34495e;
-  --error-color: #e74c3c;
-  --success-color: #2ecc71;
-  --warning-color: #f39c12;
-}
-
 body {
-  font-family: 'Arial', sans-serif;
+  font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
   line-height: 1.6;
   color: var(--text-color);
   background-color: var(--background-color);
@@ -20,41 +8,55 @@ body {
 }
 
 .App {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-.header {
+.App-header {
+  background-color: var(--surface-color);
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid var(--primary-color);
 }
 
-h1,
-h2 {
+.App-header h1 {
   color: var(--primary-color);
-  margin: 0 0 20px 0;
+  margin: 0;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.welcome-message {
+  color: var(--text-color);
+}
+
+main {
+  flex-grow: 1;
+  padding: 2rem;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .btn {
-  padding: 10px 15px;
+  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 5px;
-  font-size: 16px;
+  border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s, transform 0.1s;
 }
 
 .btn:hover {
-  transform: translateY(-2px);
-}
-
-.btn:active {
-  transform: translateY(0);
+  transform: translateY(-1px);
 }
 
 .btn-primary {
@@ -64,15 +66,6 @@ h2 {
 
 .btn-primary:hover {
   background-color: var(--primary-dark);
-}
-
-.btn-secondary {
-  background-color: var(--secondary-color);
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: var(--secondary-dark);
 }
 
 .btn-danger {
@@ -86,31 +79,14 @@ h2 {
 
 .input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid var(--primary-color);
-  border-radius: 5px;
-  font-size: 16px;
-  transition: border-color 0.3s;
+  padding: 0.5rem;
+  border: 1px solid var(--text-light);
+  border-radius: 4px;
+  font-size: 1rem;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--primary-dark);
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-@media (max-width: 768px) {
-  .App {
-    padding: 10px;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .btn,
-  .input {
-    font-size: 14px;
-  }
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(58, 110, 165, 0.2);
 }

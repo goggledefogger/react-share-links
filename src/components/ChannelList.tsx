@@ -1,4 +1,3 @@
-// src/components/ChannelList.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useChannels } from '../hooks/useChannels';
@@ -7,7 +6,7 @@ import Form from './common/Form';
 import './ChannelList.css';
 
 const ChannelList: React.FC = () => {
-  const { channelList: channels, addChannel, deleteChannel } = useChannels();
+  const { channelList, addChannel, deleteChannel } = useChannels();
 
   const handleAddChannel = (formData: { [key: string]: string }) => {
     const { channelName } = formData;
@@ -17,12 +16,16 @@ const ChannelList: React.FC = () => {
   };
 
   return (
-    <div className="channel-list">
-      <h2>Channels</h2>
-      <ul>
-        {channels.map((channel: Channel) => (
-          <li key={channel.id}>
-            <Link to={`/channel/${channel.id}`}>{channel.name}</Link>
+    <div className="channel-list bg-surface shadow rounded p-4">
+      <h2 className="text-primary">Channels</h2>
+      <ul className="channel-items">
+        {channelList.map((channel: Channel) => (
+          <li
+            key={channel.id}
+            className="channel-item bg-surface shadow rounded p-4 m-4">
+            <Link to={`/channel/${channel.id}`} className="channel-link">
+              {channel.name}
+            </Link>
             <button
               className="btn btn-danger"
               onClick={() => deleteChannel(channel.id)}
@@ -32,8 +35,8 @@ const ChannelList: React.FC = () => {
           </li>
         ))}
       </ul>
-      <div className="add-channel-form">
-        <h3>Add New Channel</h3>
+      <div className="add-channel-form bg-surface shadow rounded p-4">
+        <h3 className="text-secondary">Add New Channel</h3>
         <Form
           fields={[
             {

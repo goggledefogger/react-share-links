@@ -1,4 +1,3 @@
-// src/components/common/Form.tsx
 import React, { useState } from 'react';
 
 interface FormField {
@@ -20,7 +19,7 @@ const Form: React.FC<FormProps> = ({
   fields,
   onSubmit,
   submitButtonText,
-  submitButtonClass,
+  submitButtonClass = 'btn btn-primary',
 }) => {
   const [formData, setFormData] = useState<{ [key: string]: string }>({});
 
@@ -32,6 +31,7 @@ const Form: React.FC<FormProps> = ({
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSubmit(formData);
+    setFormData({}); // Reset form after submission
   };
 
   return (
@@ -46,10 +46,10 @@ const Form: React.FC<FormProps> = ({
           onChange={handleInputChange}
           required={field.required}
           maxLength={field.maxLength}
-          className="form-input"
+          className="input"
         />
       ))}
-      <button type="submit" className={submitButtonClass || 'btn btn-primary'}>
+      <button type="submit" className={submitButtonClass}>
         {submitButtonText}
       </button>
     </form>
