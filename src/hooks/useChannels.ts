@@ -202,6 +202,21 @@ function useChannels() {
     }
   }
 
+  async function updateChannel(channelId: string, newName: string) {
+    try {
+      const channelRef = doc(db, 'channels', channelId);
+      await updateDoc(channelRef, { name: newName });
+      setChannelList((prevList) =>
+        prevList.map((channel) =>
+          channel.id === channelId ? { ...channel, name: newName } : channel
+        )
+      );
+    } catch (error) {
+      console.error('Error updating channel:', error);
+      throw error;
+    }
+  }
+
   return {
     channelList,
     loading,
@@ -213,6 +228,7 @@ function useChannels() {
     addLink,
     deleteLink,
     addEmojiReaction,
+    updateChannel,
   };
 }
 

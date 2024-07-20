@@ -6,6 +6,7 @@ interface FormField {
   placeholder: string;
   required?: boolean;
   maxLength?: number;
+  defaultValue?: string;
 }
 
 interface FormProps {
@@ -21,7 +22,16 @@ const Form: React.FC<FormProps> = ({
   submitButtonText,
   submitButtonClass = 'btn btn-primary',
 }) => {
-  const [formData, setFormData] = useState<{ [key: string]: string }>({});
+  const [formData, setFormData] = useState<{ [key: string]: string }>(() => {
+    // Initialize form data with default values
+    const initialData: { [key: string]: string } = {};
+    fields.forEach((field) => {
+      if (field.defaultValue) {
+        initialData[field.name] = field.defaultValue;
+      }
+    });
+    return initialData;
+  });
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;

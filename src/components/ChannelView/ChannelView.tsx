@@ -1,4 +1,3 @@
-// src/components/ChannelView.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
@@ -6,6 +5,9 @@ import { Channel, Link } from '../../types';
 import { useToast } from '../../contexts/ToastContext';
 import Form from '../common/Form';
 import EmojiPicker from 'emoji-picker-react';
+import DropdownMenu from '../common/DropdownMenu';
+import { formatRelativeTime } from '../../utils/dateUtils';
+import { FaUser, FaClock, FaLink, FaEllipsisV } from 'react-icons/fa';
 import './ChannelView.css';
 
 const ChannelView: React.FC = () => {
@@ -85,51 +87,77 @@ const ChannelView: React.FC = () => {
 
   return (
     <div className="channel-view">
-      <h2 className="channel-title">Channel: {channel.name}</h2>
+      <h2 className="channel-title">Channel: {channel?.name}</h2>
       <RouterLink to="/" className="back-link">
         Back to Channels
       </RouterLink>
-      <div className="add-link-form form-section">
+
+      {/* Add link form */}
+      <div className="add-link-form">
         <h3>Add New Link</h3>
         <Form
           fields={[
             {
               name: 'url',
-              type: 'url',
+              type: 'text',
               placeholder: 'Enter a URL',
               required: true,
             },
           ]}
           onSubmit={handleAddLink}
           submitButtonText="Add Link"
-          submitButtonClass="form-button"
+          submitButtonClass="btn btn-primary"
         />
       </div>
+
+      {/* Link list */}
       <ul className="link-list">
         {links.map((link) => (
-          <li key={link.id} className="link-item">
-            <a
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="link-url">
-              {link.url}
-            </a>
-            <p className="link-info">
-              Added by: {link.username} at{' '}
-              {new Date(link.createdAt).toLocaleString()}
-            </p>
-            <div className="link-actions">
-              <button
-                onClick={() => setShowEmojiPicker(link.id)}
-                className="btn btn-secondary">
-                Add Reaction
-              </button>
-              <button
-                onClick={() => handleDeleteLink(link.id)}
-                className="btn btn-danger">
-                Delete
-              </button>
+          <li key={link.id} className="link-card">
+            <div className="link-card-header">
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link-url">
+                <FaLink className="icon" /> {link.url}
+              </a>
+              <DropdownMenu
+                toggleButton={
+                  <button className="btn-icon">
+                    <FaEllipsisV />
+                  </button>
+                }
+                options={[
+                  {
+                    label: 'Add Reaction',
+                    action: () => setShowEmojiPicker(link.id),
+                  },
+                  {
+                    label: 'Delete',
+                    action: () => handleDeleteLink(link.id),
+                  },
+                ]}
+              />
+            </div>
+            <div className="link-card-content">
+              <div className="link-meta">
+                <span className="link-author">
+                  <FaUser className="icon" /> {link.username}
+                </span>
+                <span className="link-date">
+                  <FaClock className="icon" />{' '}
+                  {formatRelativeTime(link.createdAt)}
+                </span>
+              </div>
+              <div className="link-reactions">
+                {link.reactions &&
+                  link.reactions.map((emoji, index) => (
+                    <span key={index} className="reaction">
+                      {emoji}
+                    </span>
+                  ))}
+              </div>
             </div>
             {showEmojiPicker === link.id && (
               <div className="emoji-picker-container">
@@ -140,14 +168,6 @@ const ChannelView: React.FC = () => {
                 />
               </div>
             )}
-            <div className="reactions">
-              {link.reactions &&
-                link.reactions.map((emoji, index) => (
-                  <span key={index} className="reaction">
-                    {emoji}
-                  </span>
-                ))}
-            </div>
           </li>
         ))}
       </ul>
