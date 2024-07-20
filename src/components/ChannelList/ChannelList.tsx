@@ -3,17 +3,47 @@ import { Link } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
 import { Channel } from '../../types';
 import Form from '../common/Form';
+import ConfirmDialog from '../common/ConfirmDialog';
+import { useToast } from '../../contexts/ToastContext';
 import './ChannelList.css';
 
 const ChannelList: React.FC = () => {
   const { channelList, addChannel, deleteChannel, updateChannel } =
     useChannels();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    channelId: string | null;
+  }>({
+    isOpen: false,
+    channelId: null,
+  });
+  const { showToast } = useToast();
 
-  const handleAddChannel = (formData: { [key: string]: string }) => {
+  const handleAddChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
     if (channelName.trim()) {
-      addChannel(channelName);
+      // Check if a channel with this name already exists
+      const channelExists = channelList.some(
+        (channel) =>
+          channel.name.toLowerCase() === channelName.trim().toLowerCase()
+      );
+
+      if (channelExists) {
+        showToast({
+          message: 'A channel with this name already exists',
+          type: 'error',
+        });
+        return;
+      }
+
+      try {
+        const newChannel = await addChannel(channelName);
+        showToast({ message: 'Channel added successfully', type: 'success' });
+      } catch (error) {
+        console.error('Error adding channel:', error);
+        showToast({ message: 'Failed to add channel', type: 'error' });
+      }
     }
   };
 
@@ -21,12 +51,63 @@ const ChannelList: React.FC = () => {
     setEditingChannelId(channel.id);
   };
 
-  const handleUpdateChannel = (formData: { [key: string]: string }) => {
+  const handleUpdateChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
     if (channelName.trim() && editingChannelId) {
-      updateChannel(editingChannelId, channelName);
+      // Check if the new name is different from the current name
+      const currentChannel = channelList.find(
+        (channel) => channel.id === editingChannelId
+      );
+      if (currentChannel && currentChannel.name !== channelName.trim()) {
+        // Check if another channel already has this name
+        const channelExists = channelList.some(
+          (channel) =>
+            channel.id !== editingChannelId &&
+            channel.name.toLowerCase() === channelName.trim().toLowerCase()
+        );
+
+        if (channelExists) {
+          showToast({
+            message: 'A channel with this name already exists',
+            type: 'error',
+          });
+          return;
+        }
+
+        try {
+          await updateChannel(editingChannelId, channelName);
+          showToast({
+            message: 'Channel updated successfully',
+            type: 'success',
+          });
+        } catch (error) {
+          console.error('Error updating channel:', error);
+          showToast({ message: 'Failed to update channel', type: 'error' });
+        }
+      }
       setEditingChannelId(null);
     }
+  };
+
+  const handleDeleteClick = (channelId: string) => {
+    setDeleteConfirmation({ isOpen: true, channelId });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirmation.channelId) {
+      try {
+        await deleteChannel(deleteConfirmation.channelId);
+        showToast({ message: 'Channel deleted successfully', type: 'success' });
+      } catch (error) {
+        console.error('Error deleting channel:', error);
+        showToast({ message: 'Failed to delete channel', type: 'error' });
+      }
+      setDeleteConfirmation({ isOpen: false, channelId: null });
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmation({ isOpen: false, channelId: null });
   };
 
   return (
@@ -62,7 +143,7 @@ const ChannelList: React.FC = () => {
                 </button>
                 <button
                   className="btn btn-danger"
-                  onClick={() => deleteChannel(channel.id)}
+                  onClick={() => handleDeleteClick(channel.id)}
                   aria-label={`Delete ${channel.name} channel`}>
                   Delete
                 </button>
@@ -86,6 +167,12 @@ const ChannelList: React.FC = () => {
           submitButtonText="Add Channel"
         />
       </div>
+      <ConfirmDialog
+        isOpen={deleteConfirmation.isOpen}
+        message="Are you sure you want to delete this channel?"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
     </div>
   );
 };

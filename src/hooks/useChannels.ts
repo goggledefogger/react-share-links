@@ -27,7 +27,7 @@ function useChannels() {
   useEffect(() => {
     const channelsCollection = collection(db, 'channels');
     const unsubscribe = onSnapshot(
-      channelsCollection,
+      query(channelsCollection),
       (snapshot) => {
         const updatedChannels = snapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() } as Channel)
@@ -50,19 +50,20 @@ function useChannels() {
     if (!user) throw new Error('User must be logged in to create a channel');
 
     try {
-      const newChannel: any = {
+      const newChannel: Omit<Channel, 'id'> = {
         name: channelName.trim(),
         createdBy: user.uid,
         createdAt: Date.now(),
       };
 
-      if (description) {
+      // Only add the description field if it's provided and not empty
+      if (description && description.trim() !== '') {
         newChannel.description = description.trim();
       }
 
       const docRef = await addDoc(collection(db, 'channels'), newChannel);
       const createdChannel: Channel = { id: docRef.id, ...newChannel };
-      setChannelList((prevList) => [...prevList, createdChannel]);
+
       return createdChannel;
     } catch (e) {
       console.error('Error adding channel: ', e);
@@ -73,9 +74,7 @@ function useChannels() {
   async function deleteChannel(channelId: string) {
     try {
       await deleteDoc(doc(db, 'channels', channelId));
-      setChannelList((prevList) =>
-        prevList.filter((channel) => channel.id !== channelId)
-      );
+      // We don't need to update the state here, as the onSnapshot listener will do it for us
     } catch (e) {
       console.error('Error removing channel: ', e);
       throw e;
@@ -205,12 +204,8 @@ function useChannels() {
   async function updateChannel(channelId: string, newName: string) {
     try {
       const channelRef = doc(db, 'channels', channelId);
-      await updateDoc(channelRef, { name: newName });
-      setChannelList((prevList) =>
-        prevList.map((channel) =>
-          channel.id === channelId ? { ...channel, name: newName } : channel
-        )
-      );
+      await updateDoc(channelRef, { name: newName.trim() });
+      // We don't need to update the state here, as the onSnapshot listener will do it for us
     } catch (error) {
       console.error('Error updating channel:', error);
       throw error;

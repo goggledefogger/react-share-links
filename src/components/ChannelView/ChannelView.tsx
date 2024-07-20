@@ -6,6 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import Form from '../common/Form';
 import EmojiPicker from 'emoji-picker-react';
 import DropdownMenu from '../common/DropdownMenu';
+import ConfirmDialog from '../common/ConfirmDialog';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import { FaUser, FaClock, FaLink, FaEllipsisV } from 'react-icons/fa';
 import './ChannelView.css';
@@ -18,6 +19,13 @@ const ChannelView: React.FC = () => {
   const { getChannel, getChannelLinks, addLink, deleteLink, addEmojiReaction } =
     useChannels();
   const { showToast } = useToast();
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    linkId: string | null;
+  }>({
+    isOpen: false,
+    linkId: null,
+  });
 
   useEffect(() => {
     const fetchChannelAndLinks = async () => {
@@ -52,13 +60,28 @@ const ChannelView: React.FC = () => {
     }
   };
 
-  const handleDeleteLink = async (linkId: string) => {
-    if (await deleteLink(linkId)) {
-      setLinks((prevLinks) => prevLinks.filter((link) => link.id !== linkId));
-      showToast({ message: 'Link deleted successfully', type: 'success' });
-    } else {
-      showToast({ message: 'Failed to delete link', type: 'error' });
+  const handleDeleteClick = (linkId: string) => {
+    setDeleteConfirmation({ isOpen: true, linkId });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirmation.linkId) {
+      try {
+        await deleteLink(deleteConfirmation.linkId);
+        setLinks((prevLinks) =>
+          prevLinks.filter((link) => link.id !== deleteConfirmation.linkId)
+        );
+        showToast({ message: 'Link deleted successfully', type: 'success' });
+      } catch (error) {
+        console.error('Error deleting link:', error);
+        showToast({ message: 'Failed to delete link', type: 'error' });
+      }
+      setDeleteConfirmation({ isOpen: false, linkId: null });
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmation({ isOpen: false, linkId: null });
   };
 
   const handleEmojiClick = async (linkId: string, emojiObject: any) => {
@@ -135,7 +158,7 @@ const ChannelView: React.FC = () => {
                   },
                   {
                     label: 'Delete',
-                    action: () => handleDeleteLink(link.id),
+                    action: () => handleDeleteClick(link.id),
                   },
                 ]}
               />
@@ -171,6 +194,12 @@ const ChannelView: React.FC = () => {
           </li>
         ))}
       </ul>
+      <ConfirmDialog
+        isOpen={deleteConfirmation.isOpen}
+        message="Are you sure you want to delete this link?"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
     </div>
   );
 };
