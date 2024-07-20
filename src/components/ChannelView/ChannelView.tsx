@@ -89,20 +89,20 @@ const ChannelView: React.FC = () => {
       <RouterLink to="/" className="back-link">
         Back to Channels
       </RouterLink>
-      <div className="add-link-form">
+      <div className="add-link-form form-section">
         <h3>Add New Link</h3>
         <Form
           fields={[
             {
               name: 'url',
-              type: 'text',
+              type: 'url',
               placeholder: 'Enter a URL',
               required: true,
             },
           ]}
           onSubmit={handleAddLink}
           submitButtonText="Add Link"
-          submitButtonClass="btn btn-primary"
+          submitButtonClass="form-button"
         />
       </div>
       <ul className="link-list">

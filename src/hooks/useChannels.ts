@@ -13,6 +13,7 @@ import {
   doc,
   updateDoc,
   arrayUnion,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Channel, Link, User } from '../types';
@@ -20,22 +21,28 @@ import { isWebUri } from 'valid-url';
 
 function useChannels() {
   const [channelList, setChannelList] = useState<Channel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchChannels = async () => {
-      const channelsCollection = collection(db, 'channels');
-      const channelSnapshot = await getDocs(channelsCollection);
-      const channelList = channelSnapshot.docs.map(
-        (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-          } as Channel)
-      );
-      setChannelList(channelList);
-    };
+    const channelsCollection = collection(db, 'channels');
+    const unsubscribe = onSnapshot(
+      channelsCollection,
+      (snapshot) => {
+        const updatedChannels = snapshot.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as Channel)
+        );
+        setChannelList(updatedChannels);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching channels:', err);
+        setError('Failed to fetch channels');
+        setLoading(false);
+      }
+    );
 
-    fetchChannels();
+    return () => unsubscribe();
   }, []);
 
   async function addChannel(channelName: string, description?: string) {
@@ -92,22 +99,27 @@ function useChannels() {
     limitCount = 20,
     lastTimestamp?: number
   ) {
-    const linksCollection = collection(db, 'links');
-    let q = query(
-      linksCollection,
-      where('channelId', '==', channelId),
-      orderBy('createdAt', 'desc'),
-      limit(limitCount)
-    );
+    try {
+      const linksCollection = collection(db, 'links');
+      let q = query(
+        linksCollection,
+        where('channelId', '==', channelId),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
 
-    if (lastTimestamp) {
-      q = query(q, startAfter(lastTimestamp));
+      if (lastTimestamp) {
+        q = query(q, startAfter(lastTimestamp));
+      }
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Link)
+      );
+    } catch (error) {
+      console.error('Error fetching channel links:', error);
+      throw new Error('Failed to fetch channel links');
     }
-
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as Link)
-    );
   }
 
   async function addLink(channelId: string, url: string, emoji?: string) {
@@ -192,6 +204,8 @@ function useChannels() {
 
   return {
     channelList,
+    loading,
+    error,
     addChannel,
     deleteChannel,
     getChannel,

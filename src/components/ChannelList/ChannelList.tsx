@@ -33,7 +33,7 @@ const ChannelList: React.FC = () => {
           </li>
         ))}
       </ul>
-      <div className="add-channel-form">
+      <div className="add-channel-form form-section">
         <h3>Add New Channel</h3>
         <Form
           fields={[
@@ -46,6 +46,7 @@ const ChannelList: React.FC = () => {
           ]}
           onSubmit={handleAddChannel}
           submitButtonText="Add Channel"
+          submitButtonClass="form-button"
         />
       </div>
     </div>

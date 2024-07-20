@@ -1,7 +1,6 @@
-// src/hooks/useAuthUser.ts
 import { useState, useEffect } from 'react';
-import { User, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { User, signOut, updateProfile } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 interface UserProfile {
@@ -85,5 +84,30 @@ export function useAuthUser() {
     }
   };
 
-  return { ...authUser, signOutUser };
+  const updateUserProfile = async (newProfile: Partial<UserProfile>) => {
+    if (!authUser.user) {
+      throw new Error('No user logged in');
+    }
+
+    try {
+      const userRef = doc(db, 'users', authUser.user.uid);
+      await setDoc(userRef, newProfile, { merge: true });
+
+      if (newProfile.username) {
+        await updateProfile(authUser.user, {
+          displayName: newProfile.username,
+        });
+      }
+
+      setAuthUser((prev) => ({
+        ...prev,
+        profile: { ...prev.profile, ...newProfile } as UserProfile,
+      }));
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw new Error('Failed to update user profile');
+    }
+  };
+
+  return { ...authUser, signOutUser, updateUserProfile };
 }
