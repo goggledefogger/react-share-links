@@ -115,7 +115,6 @@ const ChannelView: React.FC = () => {
         Back to Channels
       </RouterLink>
 
-      {/* Add link form */}
       <div className="add-link-form">
         <h3>Add New Link</h3>
         <Form
@@ -133,7 +132,6 @@ const ChannelView: React.FC = () => {
         />
       </div>
 
-      {/* Link list */}
       <ul className="link-list">
         {links.map((link) => (
           <li key={link.id} className="link-card">

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
 import { Channel } from '../../types';
 import Form from '../common/Form';
 import ConfirmDialog from '../common/ConfirmDialog';
 import DropdownMenu from '../common/DropdownMenu';
 import { useToast } from '../../contexts/ToastContext';
+import { FaUser, FaClock, FaHashtag, FaEllipsisV } from 'react-icons/fa';
+import { formatRelativeTime } from '../../utils/dateUtils';
 import './ChannelList.css';
 
 const ChannelList: React.FC = () => {
@@ -91,10 +93,6 @@ const ChannelList: React.FC = () => {
     }
   };
 
-  const handleChannelClick = (channelId: string) => {
-    navigate(`/channel/${channelId}`);
-  };
-
   const handleDeleteClick = (channelId: string) => {
     setDeleteConfirmation({ isOpen: true, channelId });
   };
@@ -114,6 +112,10 @@ const ChannelList: React.FC = () => {
 
   const handleDeleteCancel = () => {
     setDeleteConfirmation({ isOpen: false, channelId: null });
+  };
+
+  const handleChannelClick = (channelId: string) => {
+    navigate(`/channel/${channelId}`);
   };
 
   return (
@@ -146,23 +148,38 @@ const ChannelList: React.FC = () => {
                   }
                   role="button"
                   tabIndex={0}>
-                  <span className="channel-name">{channel.name}</span>
-                  <span className="channel-creator">
-                    Created by: {channel.creatorUsername}
-                  </span>
+                  <div className="channel-header">
+                    <span className="channel-name">
+                      <FaHashtag className="icon" /> {channel.name}
+                    </span>
+                    <DropdownMenu
+                      toggleButton={
+                        <button className="btn-icon">
+                          <FaEllipsisV />
+                        </button>
+                      }
+                      options={[
+                        {
+                          label: 'Edit',
+                          action: () => handleEditChannel(channel),
+                        },
+                        {
+                          label: 'Delete',
+                          action: () => handleDeleteClick(channel.id),
+                        },
+                      ]}
+                    />
+                  </div>
+                  <div className="channel-meta">
+                    <span className="channel-creator">
+                      <FaUser className="icon" /> {channel.creatorUsername}
+                    </span>
+                    <span className="channel-date">
+                      <FaClock className="icon" />{' '}
+                      {formatRelativeTime(channel.createdAt)}
+                    </span>
+                  </div>
                 </div>
-                <DropdownMenu
-                  options={[
-                    {
-                      label: 'Edit',
-                      action: () => handleEditChannel(channel),
-                    },
-                    {
-                      label: 'Delete',
-                      action: () => handleDeleteClick(channel.id),
-                    },
-                  ]}
-                />
               </>
             )}
           </li>
