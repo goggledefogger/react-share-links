@@ -50,9 +50,14 @@ function useChannels() {
     if (!user) throw new Error('User must be logged in to create a channel');
 
     try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data() as User | undefined;
+
       const newChannel: Omit<Channel, 'id'> = {
         name: channelName.trim(),
         createdBy: user.uid,
+        creatorUsername:
+          userData?.username || user.email?.split('@')[0] || 'Anonymous',
         createdAt: Date.now(),
       };
 

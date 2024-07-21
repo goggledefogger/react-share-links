@@ -26,6 +26,25 @@
   margin-bottom: 20px;
 }
 
+.add-link-form h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+}
+
+.add-link-form form {
+  display: flex;
+  gap: 1rem;
+}
+
+.add-link-form .input {
+  flex-grow: 1;
+}
+
+.add-link-form .btn {
+  flex-shrink: 0;
+}
+
 .link-list {
   list-style-type: none;
   padding: 0;

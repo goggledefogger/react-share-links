@@ -1,5 +1,3 @@
-// types.ts
-
 export interface User {
   id: string;
   username: string;
@@ -21,5 +19,6 @@ export interface Channel {
   name: string;
   description?: string;
   createdBy: string;
+  creatorUsername: string;
   createdAt: number;
 }

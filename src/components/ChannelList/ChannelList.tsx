@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
 import { Channel } from '../../types';
 import Form from '../common/Form';
 import ConfirmDialog from '../common/ConfirmDialog';
+import DropdownMenu from '../common/DropdownMenu';
 import { useToast } from '../../contexts/ToastContext';
 import './ChannelList.css';
 
 const ChannelList: React.FC = () => {
+  const navigate = useNavigate();
   const { channelList, addChannel, deleteChannel, updateChannel } =
     useChannels();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
@@ -89,6 +91,10 @@ const ChannelList: React.FC = () => {
     }
   };
 
+  const handleChannelClick = (channelId: string) => {
+    navigate(`/channel/${channelId}`);
+  };
+
   const handleDeleteClick = (channelId: string) => {
     setDeleteConfirmation({ isOpen: true, channelId });
   };
@@ -132,21 +138,31 @@ const ChannelList: React.FC = () => {
               />
             ) : (
               <>
-                <Link to={`/channel/${channel.id}`} className="channel-link">
-                  {channel.name}
-                </Link>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => handleEditChannel(channel)}
-                  aria-label={`Edit ${channel.name} channel`}>
-                  Edit
-                </button>
-                <button
-                  className="btn btn-danger"
-                  onClick={() => handleDeleteClick(channel.id)}
-                  aria-label={`Delete ${channel.name} channel`}>
-                  Delete
-                </button>
+                <div
+                  className="channel-info"
+                  onClick={() => handleChannelClick(channel.id)}
+                  onKeyPress={(e) =>
+                    e.key === 'Enter' && handleChannelClick(channel.id)
+                  }
+                  role="button"
+                  tabIndex={0}>
+                  <span className="channel-name">{channel.name}</span>
+                  <span className="channel-creator">
+                    Created by: {channel.creatorUsername}
+                  </span>
+                </div>
+                <DropdownMenu
+                  options={[
+                    {
+                      label: 'Edit',
+                      action: () => handleEditChannel(channel),
+                    },
+                    {
+                      label: 'Delete',
+                      action: () => handleDeleteClick(channel.id),
+                    },
+                  ]}
+                />
               </>
             )}
           </li>

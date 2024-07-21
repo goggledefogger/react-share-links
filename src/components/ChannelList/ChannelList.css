@@ -27,6 +27,7 @@
   background-color: var(--background-color);
   border-radius: 4px;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .channel-item:hover {
@@ -34,15 +35,23 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.channel-link {
+.channel-info {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.channel-name {
   color: var(--text-color);
   text-decoration: none;
   font-weight: 500;
   font-size: 1.1rem;
 }
 
-.channel-link:hover {
-  color: var(--primary-color);
+.channel-creator {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-top: 0.25rem;
 }
 
 .add-channel-form {
@@ -55,4 +64,17 @@
   color: var(--primary-color);
   margin-top: 0;
   margin-bottom: 1rem;
+}
+
+.add-channel-form form {
+  display: flex;
+  gap: 1rem;
+}
+
+.add-channel-form .input {
+  flex-grow: 1;
+}
+
+.add-channel-form .btn {
+  flex-shrink: 0;
 }
