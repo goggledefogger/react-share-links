@@ -4,7 +4,7 @@ import { useChannels } from '../../hooks/useChannels';
 import { Channel, Link } from '../../types';
 import { useToast } from '../../contexts/ToastContext';
 import Form from '../common/Form';
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import DropdownMenu from '../common/DropdownMenu';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { formatRelativeTime } from '../../utils/dateUtils';
@@ -16,8 +16,7 @@ const ChannelView: React.FC = () => {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
-  const { getChannel, getChannelLinks, addLink, deleteLink, addEmojiReaction } =
-    useChannels();
+  const { getChannel, getChannelLinks, addLink, deleteLink, addEmojiReaction } = useChannels();
   const { showToast } = useToast();
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
@@ -46,29 +45,49 @@ const ChannelView: React.FC = () => {
       try {
         const newLink = await addLink(id, url);
         setLinks((prevLinks) => {
-          // Check if the link already exists in the list
-          const existingLinkIndex = prevLinks.findIndex(
-            (link) => link.id === newLink.id
-          );
+          const existingLinkIndex = prevLinks.findIndex(link => link.id === newLink.id);
           if (existingLinkIndex !== -1) {
-            // If it exists, update it
             const updatedLinks = [...prevLinks];
             updatedLinks[existingLinkIndex] = newLink;
             return updatedLinks;
           } else {
-            // If it doesn't exist, add it to the beginning of the list
             return [newLink, ...prevLinks];
           }
         });
         showToast({ message: 'Link added successfully', type: 'success' });
       } catch (error) {
         console.error('Error adding link:', error);
-        showToast({
-          message:
-            error instanceof Error ? error.message : 'Failed to add link',
-          type: 'error',
+        showToast({ 
+          message: error instanceof Error ? error.message : 'Failed to add link', 
+          type: 'error' 
         });
       }
+    }
+  };
+
+  const handleCardClick = (e: React.MouseEvent, url: string) => {
+    if (!(e.target as HTMLElement).closest('.dropdown-menu')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleEmojiClick = async (linkId: string, emojiData: EmojiClickData) => {
+    try {
+      await addEmojiReaction(linkId, { emoji: emojiData.emoji });
+      setLinks((prevLinks) =>
+        prevLinks.map((link) =>
+          link.id === linkId
+            ? {
+                ...link,
+                reactions: [...(link.reactions || []), emojiData.emoji],
+              }
+            : link
+        )
+      );
+      setShowEmojiPicker(null);
+    } catch (error) {
+      console.error('Error adding emoji reaction:', error);
+      showToast({ message: 'Failed to add emoji reaction', type: 'error' });
     }
   };
 
@@ -94,41 +113,6 @@ const ChannelView: React.FC = () => {
 
   const handleDeleteCancel = () => {
     setDeleteConfirmation({ isOpen: false, linkId: null });
-  };
-
-  const handleEmojiClick = async (linkId: string, emojiObject: any) => {
-    try {
-      await addEmojiReaction(linkId, emojiObject.emoji);
-      setLinks((prevLinks) =>
-        prevLinks.map((link) =>
-          link.id === linkId
-            ? {
-                ...link,
-                reactions: [...(link.reactions || []), emojiObject.emoji],
-              }
-            : link
-        )
-      );
-      setShowEmojiPicker(null);
-    } catch (error) {
-      console.error('Error adding emoji reaction:', error);
-      showToast({ message: 'Failed to add emoji reaction', type: 'error' });
-    }
-  };
-
-  if (!channel) {
-    return <div className="loading">Loading...</div>;
-  }
-
-  const handleLinkClick = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleCardClick = (e: React.MouseEvent, url: string) => {
-    // Check if the click target is not part of the dropdown menu
-    if (!(e.target as HTMLElement).closest('.dropdown-menu')) {
-      handleLinkClick(url);
-    }
   };
 
   return (
@@ -157,37 +141,32 @@ const ChannelView: React.FC = () => {
 
       <ul className="link-list">
         {links.map((link) => (
-          <li
-            key={link.id}
-            className="link-card"
-            onClick={(e) => handleCardClick(e, link.url)}>
+          <li key={`${link.id}-${link.createdAt}`} className="link-card" onClick={(e) => handleCardClick(e, link.url)}>
             <div className="link-card-header">
               <span className="link-url">
                 <FaLink className="icon" /> {link.url}
               </span>
-              <div className="dropdown-wrapper">
-                <DropdownMenu
-                  toggleButton={
-                    <button className="btn-icon" aria-label="More options">
-                      <FaEllipsisV />
-                    </button>
-                  }
-                  options={[
-                    {
-                      label: 'Add Reaction',
-                      action: () => {
-                        setShowEmojiPicker(link.id);
-                      },
+              <DropdownMenu
+                toggleButton={
+                  <button className="btn-icon" aria-label="More options">
+                    <FaEllipsisV />
+                  </button>
+                }
+                options={[
+                  {
+                    label: 'Add Reaction',
+                    action: () => {
+                      setShowEmojiPicker(link.id);
                     },
-                    {
-                      label: 'Delete',
-                      action: () => {
-                        handleDeleteClick(link.id);
-                      },
+                  },
+                  {
+                    label: 'Delete',
+                    action: () => {
+                      handleDeleteClick(link.id);
                     },
-                  ]}
-                />
-              </div>
+                  },
+                ]}
+              />
             </div>
             <div className="link-card-content">
               <div className="link-meta">
@@ -195,8 +174,7 @@ const ChannelView: React.FC = () => {
                   <FaUser className="icon" /> {link.username}
                 </span>
                 <span className="link-date">
-                  <FaClock className="icon" />{' '}
-                  {formatRelativeTime(link.createdAt)}
+                  <FaClock className="icon" /> {formatRelativeTime(link.createdAt)}
                 </span>
               </div>
               <div className="link-reactions">
@@ -209,13 +187,9 @@ const ChannelView: React.FC = () => {
               </div>
             </div>
             {showEmojiPicker === link.id && (
-              <div
-                className="emoji-picker-container"
-                onClick={(e) => e.stopPropagation()}>
+              <div className="emoji-picker-container" onClick={(e) => e.stopPropagation()}>
                 <EmojiPicker
-                  onEmojiClick={(emojiObject) =>
-                    handleEmojiClick(link.id, emojiObject)
-                  }
+                  onEmojiClick={(emojiData) => handleEmojiClick(link.id, emojiData)}
                 />
               </div>
             )}

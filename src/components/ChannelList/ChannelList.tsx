@@ -6,13 +6,7 @@ import Form from '../common/Form';
 import ConfirmDialog from '../common/ConfirmDialog';
 import DropdownMenu from '../common/DropdownMenu';
 import { useToast } from '../../contexts/ToastContext';
-import {
-  FaUser,
-  FaClock,
-  FaHashtag,
-  FaEllipsisV,
-  FaLink,
-} from 'react-icons/fa';
+import { FaUser, FaClock, FaHashtag, FaEllipsisV, FaLink } from 'react-icons/fa';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import './ChannelList.css';
 
@@ -48,7 +42,6 @@ const ChannelList: React.FC = () => {
   const handleAddChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
     if (channelName.trim()) {
-      // Check if a channel with this name already exists
       const channelExists = channelList.some(
         (channel) =>
           channel.name.toLowerCase() === channelName.trim().toLowerCase()
@@ -63,7 +56,7 @@ const ChannelList: React.FC = () => {
       }
 
       try {
-        const newChannel = await addChannel(channelName);
+        await addChannel(channelName);
         showToast({ message: 'Channel added successfully', type: 'success' });
       } catch (error) {
         console.error('Error adding channel:', error);

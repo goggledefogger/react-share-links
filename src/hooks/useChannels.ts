@@ -193,12 +193,6 @@ function useChannels() {
     }
   }
 
-  function isValidEmoji(emoji: string): boolean {
-    // Basic emoji validation (you might want to use a library for more comprehensive validation)
-    const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)$/u;
-    return emojiRegex.test(emoji) && emoji.length === 1;
-  }
-
   async function deleteLink(linkId: string) {
     try {
       await deleteDoc(doc(db, 'links', linkId));
@@ -209,11 +203,22 @@ function useChannels() {
     }
   }
 
-  async function addEmojiReaction(linkId: string, emoji: string) {
+  function isValidEmoji(emoji: string): boolean {
+    // This regex will match most emoji, including compound emoji
+    const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Component}){1,3}$/u;
+    return emojiRegex.test(emoji);
+  }
+
+  async function addEmojiReaction(linkId: string, emojiObject: { emoji: string }) {
+    if (!isValidEmoji(emojiObject.emoji)) {
+      console.warn('Invalid emoji:', emojiObject.emoji);
+      throw new Error('Invalid emoji');
+    }
+
     try {
       const linkRef = doc(db, 'links', linkId);
       await updateDoc(linkRef, {
-        reactions: arrayUnion(emoji),
+        reactions: arrayUnion(emojiObject.emoji),
       });
       return true;
     } catch (e) {
