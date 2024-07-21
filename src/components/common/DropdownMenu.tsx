@@ -29,12 +29,26 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
     };
   }, []);
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(!isOpen);
+  };
+
+  const handleOptionClick = (e: React.MouseEvent, action: () => void) => {
+    e.stopPropagation();
+    action();
+    setIsOpen(false);
+  };
+
   return (
-    <div className="dropdown" ref={dropdownRef}>
+    <div
+      className="dropdown"
+      ref={dropdownRef}
+      onClick={(e) => e.stopPropagation()}>
       {toggleButton ? (
-        <div onClick={() => setIsOpen(!isOpen)}>{toggleButton}</div>
+        <div onClick={handleToggle}>{toggleButton}</div>
       ) : (
-        <button className="dropdown-toggle" onClick={() => setIsOpen(!isOpen)}>
+        <button className="dropdown-toggle" onClick={handleToggle}>
           ⋮
         </button>
       )}
@@ -43,10 +57,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
           {options.map((option, index) => (
             <li
               key={index}
-              onClick={() => {
-                option.action();
-                setIsOpen(false);
-              }}>
+              onClick={(e) => handleOptionClick(e, option.action)}>
               {option.label}
             </li>
           ))}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
 import { Channel } from '../../types';
@@ -6,14 +6,25 @@ import Form from '../common/Form';
 import ConfirmDialog from '../common/ConfirmDialog';
 import DropdownMenu from '../common/DropdownMenu';
 import { useToast } from '../../contexts/ToastContext';
-import { FaUser, FaClock, FaHashtag, FaEllipsisV } from 'react-icons/fa';
+import {
+  FaUser,
+  FaClock,
+  FaHashtag,
+  FaEllipsisV,
+  FaLink,
+} from 'react-icons/fa';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import './ChannelList.css';
 
 const ChannelList: React.FC = () => {
   const navigate = useNavigate();
-  const { channelList, addChannel, deleteChannel, updateChannel } =
-    useChannels();
+  const {
+    channelList,
+    addChannel,
+    deleteChannel,
+    updateChannel,
+    getAllChannelLinkCounts,
+  } = useChannels();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
@@ -22,7 +33,17 @@ const ChannelList: React.FC = () => {
     isOpen: false,
     channelId: null,
   });
+  const [linkCounts, setLinkCounts] = useState<{ [key: string]: number }>({});
   const { showToast } = useToast();
+
+  useEffect(() => {
+    const fetchLinkCounts = async () => {
+      const counts = await getAllChannelLinkCounts();
+      setLinkCounts(counts);
+    };
+
+    fetchLinkCounts();
+  }, [getAllChannelLinkCounts]);
 
   const handleAddChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
@@ -177,6 +198,13 @@ const ChannelList: React.FC = () => {
                     <span className="channel-date">
                       <FaClock className="icon" />{' '}
                       {formatRelativeTime(channel.createdAt)}
+                    </span>
+                    <span className="channel-link-count">
+                      <FaLink className="icon" />{' '}
+                      {linkCounts[channel.id] !== undefined
+                        ? linkCounts[channel.id]
+                        : '...'}{' '}
+                      links
                     </span>
                   </div>
                 </div>

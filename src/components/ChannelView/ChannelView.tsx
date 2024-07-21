@@ -46,16 +46,28 @@ const ChannelView: React.FC = () => {
       try {
         const newLink = await addLink(id, url);
         setLinks((prevLinks) => {
-          const updatedLinks = [newLink, ...prevLinks];
-          return updatedLinks.filter(
-            (link, index, self) =>
-              index === self.findIndex((t) => t.id === link.id)
+          // Check if the link already exists in the list
+          const existingLinkIndex = prevLinks.findIndex(
+            (link) => link.id === newLink.id
           );
+          if (existingLinkIndex !== -1) {
+            // If it exists, update it
+            const updatedLinks = [...prevLinks];
+            updatedLinks[existingLinkIndex] = newLink;
+            return updatedLinks;
+          } else {
+            // If it doesn't exist, add it to the beginning of the list
+            return [newLink, ...prevLinks];
+          }
         });
         showToast({ message: 'Link added successfully', type: 'success' });
       } catch (error) {
         console.error('Error adding link:', error);
-        showToast({ message: 'Failed to add link', type: 'error' });
+        showToast({
+          message:
+            error instanceof Error ? error.message : 'Failed to add link',
+          type: 'error',
+        });
       }
     }
   };
@@ -108,6 +120,17 @@ const ChannelView: React.FC = () => {
     return <div className="loading">Loading...</div>;
   }
 
+  const handleLinkClick = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCardClick = (e: React.MouseEvent, url: string) => {
+    // Check if the click target is not part of the dropdown menu
+    if (!(e.target as HTMLElement).closest('.dropdown-menu')) {
+      handleLinkClick(url);
+    }
+  };
+
   return (
     <div className="channel-view">
       <h2 className="channel-title">Channel: {channel?.name}</h2>
@@ -134,32 +157,37 @@ const ChannelView: React.FC = () => {
 
       <ul className="link-list">
         {links.map((link) => (
-          <li key={link.id} className="link-card">
+          <li
+            key={link.id}
+            className="link-card"
+            onClick={(e) => handleCardClick(e, link.url)}>
             <div className="link-card-header">
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link-url">
+              <span className="link-url">
                 <FaLink className="icon" /> {link.url}
-              </a>
-              <DropdownMenu
-                toggleButton={
-                  <button className="btn-icon">
-                    <FaEllipsisV />
-                  </button>
-                }
-                options={[
-                  {
-                    label: 'Add Reaction',
-                    action: () => setShowEmojiPicker(link.id),
-                  },
-                  {
-                    label: 'Delete',
-                    action: () => handleDeleteClick(link.id),
-                  },
-                ]}
-              />
+              </span>
+              <div className="dropdown-wrapper">
+                <DropdownMenu
+                  toggleButton={
+                    <button className="btn-icon" aria-label="More options">
+                      <FaEllipsisV />
+                    </button>
+                  }
+                  options={[
+                    {
+                      label: 'Add Reaction',
+                      action: () => {
+                        setShowEmojiPicker(link.id);
+                      },
+                    },
+                    {
+                      label: 'Delete',
+                      action: () => {
+                        handleDeleteClick(link.id);
+                      },
+                    },
+                  ]}
+                />
+              </div>
             </div>
             <div className="link-card-content">
               <div className="link-meta">
@@ -181,7 +209,9 @@ const ChannelView: React.FC = () => {
               </div>
             </div>
             {showEmojiPicker === link.id && (
-              <div className="emoji-picker-container">
+              <div
+                className="emoji-picker-container"
+                onClick={(e) => e.stopPropagation()}>
                 <EmojiPicker
                   onEmojiClick={(emojiObject) =>
                     handleEmojiClick(link.id, emojiObject)

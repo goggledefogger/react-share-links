@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   collection,
   query,
@@ -14,6 +14,7 @@ import {
   updateDoc,
   arrayUnion,
   onSnapshot,
+  getCountFromServer,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Channel, Link, User } from '../types';
@@ -27,7 +28,7 @@ function useChannels() {
   useEffect(() => {
     const channelsCollection = collection(db, 'channels');
     const unsubscribe = onSnapshot(
-      query(channelsCollection),
+      query(channelsCollection, orderBy('createdAt', 'desc')),
       (snapshot) => {
         const updatedChannels = snapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() } as Channel)
@@ -45,6 +46,73 @@ function useChannels() {
     return () => unsubscribe();
   }, []);
 
+  const getAllChannelLinkCounts = useCallback(async (): Promise<{
+    [key: string]: number;
+  }> => {
+    const counts: { [key: string]: number } = {};
+
+    for (const channel of channelList) {
+      const linksCollection = collection(db, 'links');
+      const q = query(linksCollection, where('channelId', '==', channel.id));
+      const snapshot = await getCountFromServer(q);
+      counts[channel.id] = snapshot.data().count;
+    }
+
+    return counts;
+  }, [channelList]);
+
+  async function addLink(channelId: string, url: string, emoji?: string) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User must be logged in to add a link');
+
+    // Validate URL
+    const validatedUrl = validateAndFormatUrl(url);
+    if (!validatedUrl) {
+      throw new Error('Invalid URL. Please enter a valid web address.');
+    }
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const userData = userDoc.data() as User | undefined;
+
+      const username =
+        userData?.username ||
+        user.displayName ||
+        user.email?.split('@')[0] ||
+        'Anonymous';
+
+      const newLink = {
+        channelId,
+        userId: user.uid,
+        username,
+        url: validatedUrl,
+        emoji: emoji || null,
+        createdAt: Date.now(),
+      };
+
+      const docRef = await addDoc(collection(db, 'links'), newLink);
+
+      return { id: docRef.id, ...newLink } as Link;
+    } catch (e) {
+      console.error('Error adding link: ', e);
+      throw e;
+    }
+  }
+
+  function validateAndFormatUrl(url: string): string | null {
+    // Ensure the URL starts with a protocol
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    // Use valid-url library to check if it's a valid web URI
+    if (isWebUri(url)) {
+      return url;
+    }
+
+    return null;
+  }
+
   async function addChannel(channelName: string, description?: string) {
     const user = auth.currentUser;
     if (!user) throw new Error('User must be logged in to create a channel');
@@ -61,7 +129,6 @@ function useChannels() {
         createdAt: Date.now(),
       };
 
-      // Only add the description field if it's provided and not empty
       if (description && description.trim() !== '') {
         newChannel.description = description.trim();
       }
@@ -126,57 +193,6 @@ function useChannels() {
     }
   }
 
-  async function addLink(channelId: string, url: string, emoji?: string) {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User must be logged in to add a link');
-
-    // Validate URL
-    const validatedUrl = validateAndFormatUrl(url);
-    if (!validatedUrl) {
-      throw new Error('Invalid URL provided');
-    }
-
-    try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data() as User | undefined;
-
-      const username =
-        userData?.username ||
-        user.displayName ||
-        user.email?.split('@')[0] ||
-        'Anonymous';
-
-      const newLink = {
-        channelId,
-        userId: user.uid,
-        username,
-        url: validatedUrl,
-        emoji: emoji || null,
-        createdAt: Date.now(),
-      };
-
-      const docRef = await addDoc(collection(db, 'links'), newLink);
-      return { id: docRef.id, ...newLink } as Link;
-    } catch (e) {
-      console.error('Error adding link: ', e);
-      throw e;
-    }
-  }
-
-  function validateAndFormatUrl(url: string): string | null {
-    // Ensure the URL starts with a protocol
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-
-    // Use valid-url library to check if it's a valid web URI
-    if (isWebUri(url)) {
-      return url;
-    }
-
-    return null;
-  }
-
   function isValidEmoji(emoji: string): boolean {
     // Basic emoji validation (you might want to use a library for more comprehensive validation)
     const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)$/u;
@@ -225,6 +241,7 @@ function useChannels() {
     deleteChannel,
     getChannel,
     getChannelLinks,
+    getAllChannelLinkCounts,
     addLink,
     deleteLink,
     addEmojiReaction,
