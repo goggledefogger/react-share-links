@@ -15,10 +15,14 @@ import {
   arrayUnion,
   onSnapshot,
   getCountFromServer,
+  QueryDocumentSnapshot,
+  DocumentData,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Channel, Link, User } from '../types';
 import { isWebUri } from 'valid-url';
+
+const LINK_PREVIEW_API_KEY = process.env.REACT_APP_LINKPREVIEW_API_KEY;
 
 function useChannels() {
   const [channelList, setChannelList] = useState<Channel[]>([]);
@@ -65,7 +69,6 @@ function useChannels() {
     const user = auth.currentUser;
     if (!user) throw new Error('User must be logged in to add a link');
 
-    // Validate URL
     const validatedUrl = validateAndFormatUrl(url);
     if (!validatedUrl) {
       throw new Error('Invalid URL. Please enter a valid web address.');
@@ -81,6 +84,9 @@ function useChannels() {
         user.email?.split('@')[0] ||
         'Anonymous';
 
+      // Fetch link preview
+      const preview = await fetchLinkPreview(validatedUrl);
+
       const newLink = {
         channelId,
         userId: user.uid,
@@ -88,6 +94,7 @@ function useChannels() {
         url: validatedUrl,
         emoji: emoji || null,
         createdAt: Date.now(),
+        preview,
       };
 
       const docRef = await addDoc(collection(db, 'links'), newLink);
@@ -96,6 +103,41 @@ function useChannels() {
     } catch (e) {
       console.error('Error adding link: ', e);
       throw e;
+    }
+  }
+
+  async function fetchLinkPreview(url: string) {
+    if (!LINK_PREVIEW_API_KEY) {
+      console.error('LinkPreview API key is not set');
+      return null;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.linkpreview.net/?key=${LINK_PREVIEW_API_KEY}&q=${encodeURIComponent(
+          url
+        )}`
+      );
+      if (!response.ok) {
+        throw new Error('Failed to fetch link preview');
+      }
+      const data = await response.json();
+      return {
+        title: data.title || '',
+        description: data.description || '',
+        image: data.image || '',
+        favicon: data.favicon || '',
+      };
+    } catch (error) {
+      console.error('Error fetching link preview:', error);
+      // Fall back to extracting information from the URL
+      const urlObject = new URL(url);
+      return {
+        title: urlObject.hostname,
+        description: url,
+        image: `https://www.google.com/s2/favicons?domain=${urlObject.hostname}&sz=64`,
+        favicon: `https://www.google.com/s2/favicons?domain=${urlObject.hostname}`,
+      };
     }
   }
 
@@ -168,8 +210,11 @@ function useChannels() {
   async function getChannelLinks(
     channelId: string,
     limitCount = 20,
-    lastTimestamp?: number
-  ) {
+    lastVisible?: QueryDocumentSnapshot<Link>
+  ): Promise<{
+    links: Link[];
+    lastVisible: QueryDocumentSnapshot<Link> | undefined;
+  }> {
     try {
       const linksCollection = collection(db, 'links');
       let q = query(
@@ -179,14 +224,23 @@ function useChannels() {
         limit(limitCount)
       );
 
-      if (lastTimestamp) {
-        q = query(q, startAfter(lastTimestamp));
+      if (lastVisible) {
+        q = query(q, startAfter(lastVisible));
       }
 
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(
+      const links = querySnapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Link)
       );
+
+      const lastVisibleDoc = querySnapshot.docs[
+        querySnapshot.docs.length - 1
+      ] as QueryDocumentSnapshot<Link> | undefined;
+
+      return {
+        links,
+        lastVisible: lastVisibleDoc,
+      };
     } catch (error) {
       console.error('Error fetching channel links:', error);
       throw new Error('Failed to fetch channel links');

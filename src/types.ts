@@ -12,6 +12,12 @@ export interface Link {
   url: string;
   createdAt: number;
   reactions?: string[];
+  preview?: {
+    title: string;
+    description: string;
+    image: string;
+    favicon: string;
+  };
 }
 
 export interface Channel {

@@ -9,7 +9,10 @@ import DropdownMenu from '../common/DropdownMenu';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import { FaUser, FaClock, FaLink, FaEllipsisV } from 'react-icons/fa';
+import { QueryDocumentSnapshot } from 'firebase/firestore';
 import './ChannelView.css';
+
+const LINKS_PER_PAGE = 20;
 
 const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,40 +29,61 @@ const ChannelView: React.FC = () => {
     isOpen: false,
     linkId: null,
   });
+  const [lastVisible, setLastVisible] = useState<
+    QueryDocumentSnapshot<Link> | undefined
+  >(undefined);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     const fetchChannelAndLinks = async () => {
       if (id) {
         const fetchedChannel = await getChannel(id);
         setChannel(fetchedChannel);
-        const fetchedLinks = await getChannelLinks(id);
-        setLinks(fetchedLinks);
+        await fetchLinks();
       }
     };
 
     fetchChannelAndLinks();
-  }, [id, getChannel, getChannelLinks]);
+  }, [id, getChannel]);
+
+  const fetchLinks = async () => {
+    if (id) {
+      setIsLoadingMore(true);
+      try {
+        const result = await getChannelLinks(id, LINKS_PER_PAGE, lastVisible);
+        setLinks((prevLinks) => {
+          // Create a Set of existing IDs
+          const existingIds = new Set(prevLinks.map((link) => link.id));
+          // Filter out any new links with duplicate IDs
+          const newUniqueLinks = result.links.filter(
+            (link) => !existingIds.has(link.id)
+          );
+          return [...prevLinks, ...newUniqueLinks];
+        });
+        setLastVisible(
+          result.lastVisible as QueryDocumentSnapshot<Link> | undefined
+        );
+        setHasMore(result.links.length === LINKS_PER_PAGE);
+      } catch (error) {
+        console.error('Error fetching links:', error);
+        showToast({ message: 'Failed to load links', type: 'error' });
+      } finally {
+        setIsLoadingMore(false);
+      }
+    }
+  };
+
+  const handleLoadMore = () => {
+    fetchLinks();
+  };
 
   const handleAddLink = async (formData: { [key: string]: string }) => {
     const { url } = formData;
     if (id && url.trim()) {
       try {
         const newLink = await addLink(id, url);
-        setLinks((prevLinks) => {
-          // Check if the link already exists in the list
-          const existingLinkIndex = prevLinks.findIndex(
-            (link) => link.id === newLink.id
-          );
-          if (existingLinkIndex !== -1) {
-            // If it exists, update it
-            const updatedLinks = [...prevLinks];
-            updatedLinks[existingLinkIndex] = newLink;
-            return updatedLinks;
-          } else {
-            // If it doesn't exist, add it to the beginning of the list
-            return [newLink, ...prevLinks];
-          }
-        });
+        setLinks((prevLinks) => [newLink, ...prevLinks]);
         showToast({ message: 'Link added successfully', type: 'success' });
       } catch (error) {
         console.error('Error adding link:', error);
@@ -156,9 +180,9 @@ const ChannelView: React.FC = () => {
       </div>
 
       <ul className="link-list">
-        {links.map((link) => (
+        {links.map((link, index) => (
           <li
-            key={link.id}
+            key={`${link.id}-${index}`}
             className="link-card"
             onClick={(e) => handleCardClick(e, link.url)}>
             <div className="link-card-header">
@@ -189,6 +213,32 @@ const ChannelView: React.FC = () => {
                 />
               </div>
             </div>
+            {link.preview && (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link-preview">
+                {link.preview.image && (
+                  <img
+                    src={link.preview.image}
+                    alt={link.preview.title || 'Link preview'}
+                    className="link-thumbnail"
+                  />
+                )}
+                <div className="link-metadata">
+                  <h3 className="link-title">{link.preview.title}</h3>
+                  <p className="link-description">{link.preview.description}</p>
+                  {link.preview.favicon && (
+                    <img
+                      src={link.preview.favicon}
+                      alt="Favicon"
+                      className="link-favicon"
+                    />
+                  )}
+                </div>
+              </a>
+            )}
             <div className="link-card-content">
               <div className="link-meta">
                 <span className="link-author">
@@ -222,6 +272,16 @@ const ChannelView: React.FC = () => {
           </li>
         ))}
       </ul>
+
+      {hasMore && (
+        <button
+          onClick={handleLoadMore}
+          className="btn btn-secondary load-more-btn"
+          disabled={isLoadingMore}>
+          {isLoadingMore ? 'Loading...' : 'Load More'}
+        </button>
+      )}
+
       <ConfirmDialog
         isOpen={deleteConfirmation.isOpen}
         message="Are you sure you want to delete this link?"
