@@ -11,6 +11,7 @@ import Auth from './components/Auth/Auth';
 import { useAuthUser } from './hooks/useAuthUser';
 import { ToastProvider } from './contexts/ToastContext';
 import Toast from './components/Toast/Toast';
+import LoadingSpinner from './components/common/LoadingSpinner';
 import './styles/variables.css';
 import './styles/animations.css';
 import './App.css';
@@ -19,7 +20,11 @@ const App: React.FC = () => {
   const { user, profile, signOutUser, loading } = useAuthUser();
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return (
+      <div className="loading-container">
+        <LoadingSpinner size="large" />
+      </div>
+    );
   }
 
   return (

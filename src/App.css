@@ -155,6 +155,21 @@ main {
   background-color: #2473a6;
 }
 
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.modal-backdrop {
+  z-index: var(--z-modal-backdrop);
+}
+
+.modal {
+  z-index: var(--z-modal);
+}
+
 @media (max-width: 768px) {
   .form-section {
     padding: 16px;

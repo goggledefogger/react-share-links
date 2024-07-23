@@ -175,23 +175,6 @@ const ChannelList: React.FC = () => {
                     <span className="channel-name">
                       <FaHashtag className="icon" /> {channel.name}
                     </span>
-                    <DropdownMenu
-                      toggleButton={
-                        <button className="btn-icon">
-                          <FaEllipsisV />
-                        </button>
-                      }
-                      options={[
-                        {
-                          icon: <FaEdit />,
-                          action: () => handleEditChannel(channel),
-                        },
-                        {
-                          icon: <FaTrash />,
-                          action: () => handleDeleteClick(channel.id),
-                        },
-                      ]}
-                    />
                   </div>
                   <div className="channel-meta">
                     <span className="channel-creator">
@@ -210,6 +193,23 @@ const ChannelList: React.FC = () => {
                     </span>
                   </div>
                 </div>
+                <DropdownMenu
+                  toggleButton={
+                    <button className="btn-icon">
+                      <FaEllipsisV />
+                    </button>
+                  }
+                  options={[
+                    {
+                      icon: <FaEdit />,
+                      action: () => handleEditChannel(channel),
+                    },
+                    {
+                      icon: <FaTrash />,
+                      action: () => handleDeleteClick(channel.id),
+                    },
+                  ]}
+                />
               </>
             )}
           </li>
