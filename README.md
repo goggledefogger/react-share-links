@@ -5,16 +5,16 @@ An application for sharing links. Simple and sweet, don't worry about comments.
 ## Features
 
 - Share links with people
-- Create channels for topics or groups. Like a hashtag, but less lame
-- No need for comments or replies. Just an emoji if you want, emojis > words sometimes anyway
+- Create channels for topics or groups. Like a hashtag or group message but less lame
+- No need for comments or replies. Just an emoji if you want, emojis are better than words sometimes anyway
 
 ## Tech Stack
 
-- React cause I'm learning it, and it's pretty good
+- React cause I'm learning it and it's pretty good
 - Firebase, you get so much for so little
 - TypeScript, errors caught early and often
-- Create React App, get it started
-- pnpm cause I heard it was better
+- Create React App to get it started
+- pnpm cause I heard it was better than npm or yarn
 
 ## Getting Started
 
@@ -37,7 +37,7 @@ An application for sharing links. Simple and sweet, don't worry about comments.
    - Add a web app to your project
    - Copy the config object
    - Create a `.env` file in the root directory
-   - Add your Firebase config
+   - Add your Firebase config (not secrets but still better to have as ENV vars)
      ```
      REACT_APP_FIREBASE_API_KEY=your_api_key
      REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
