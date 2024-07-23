@@ -10,6 +10,7 @@ body {
 .App {
   display: flex;
   flex-direction: column;
+  background: linear-gradient(to bottom, var(--background-color), var(--surface-color));
   min-height: 100vh;
 }
 

@@ -8,7 +8,14 @@ import EmojiPicker from 'emoji-picker-react';
 import DropdownMenu from '../common/DropdownMenu';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { formatRelativeTime } from '../../utils/dateUtils';
-import { FaUser, FaClock, FaLink, FaEllipsisV } from 'react-icons/fa';
+import {
+  FaUser,
+  FaClock,
+  FaLink,
+  FaEllipsisV,
+  FaSmile,
+  FaTrash,
+} from 'react-icons/fa';
 import { QueryDocumentSnapshot } from 'firebase/firestore';
 import './ChannelView.css';
 
@@ -198,13 +205,13 @@ const ChannelView: React.FC = () => {
                   }
                   options={[
                     {
-                      label: 'Add Reaction',
+                      icon: <FaSmile />,
                       action: () => {
                         setShowEmojiPicker(link.id);
                       },
                     },
                     {
-                      label: 'Delete',
+                      icon: <FaTrash />,
                       action: () => {
                         handleDeleteClick(link.id);
                       },

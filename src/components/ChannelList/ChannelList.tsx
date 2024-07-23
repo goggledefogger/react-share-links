@@ -12,6 +12,8 @@ import {
   FaHashtag,
   FaEllipsisV,
   FaLink,
+  FaEdit,
+  FaTrash,
 } from 'react-icons/fa';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import './ChannelList.css';
@@ -181,11 +183,11 @@ const ChannelList: React.FC = () => {
                       }
                       options={[
                         {
-                          label: 'Edit',
+                          icon: <FaEdit />,
                           action: () => handleEditChannel(channel),
                         },
                         {
-                          label: 'Delete',
+                          icon: <FaTrash />,
                           action: () => handleDeleteClick(channel.id),
                         },
                       ]}

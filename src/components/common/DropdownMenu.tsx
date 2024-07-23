@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import './DropdownMenu.css';
 
 interface DropdownMenuProps {
-  options: { label: string; action: () => void }[];
+  options: { icon: ReactNode; action: () => void }[];
   toggleButton?: ReactNode;
 }
 
@@ -58,7 +58,7 @@ const DropdownMenu: React.FC<DropdownMenuProps> = ({
             <li
               key={index}
               onClick={(e) => handleOptionClick(e, option.action)}>
-              {option.label}
+              {option.icon}
             </li>
           ))}
         </ul>
