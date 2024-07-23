@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
-import { Channel, Link } from '../../types';
+import { useAuthUser } from '../../hooks/useAuthUser';
+import { Channel, Link, Reaction } from '../../types';
 import { useToast } from '../../contexts/ToastContext';
 import Form from '../common/Form';
 import EmojiPicker from 'emoji-picker-react';
@@ -26,9 +27,16 @@ const ChannelView: React.FC = () => {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
-  const { getChannel, getChannelLinks, addLink, deleteLink, addEmojiReaction } =
-    useChannels();
+  const {
+    getChannel,
+    getChannelLinks,
+    addLink,
+    deleteLink,
+    addEmojiReaction,
+    removeEmojiReaction,
+  } = useChannels();
   const { showToast } = useToast();
+  const { user } = useAuthUser();
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     linkId: string | null;
@@ -47,12 +55,15 @@ const ChannelView: React.FC = () => {
       if (id) {
         const fetchedChannel = await getChannel(id);
         setChannel(fetchedChannel);
-        await fetchLinks();
+        const { links: fetchedLinks, lastVisible: lastVisibleDoc } =
+          await getChannelLinks(id);
+        setLinks(fetchedLinks);
+        setLastVisible(lastVisibleDoc);
       }
     };
 
     fetchChannelAndLinks();
-  }, [id, getChannel]);
+  }, [id, getChannel, getChannelLinks]);
 
   const fetchLinks = async () => {
     if (id) {
@@ -127,15 +138,21 @@ const ChannelView: React.FC = () => {
     setDeleteConfirmation({ isOpen: false, linkId: null });
   };
 
-  const handleEmojiClick = async (linkId: string, emojiObject: any) => {
+  const handleEmojiClick = async (
+    linkId: string,
+    emojiObject: { emoji: string }
+  ) => {
     try {
-      await addEmojiReaction(linkId, emojiObject.emoji);
+      await addEmojiReaction(linkId, emojiObject.emoji, user?.uid);
       setLinks((prevLinks) =>
         prevLinks.map((link) =>
           link.id === linkId
             ? {
                 ...link,
-                reactions: [...(link.reactions || []), emojiObject.emoji],
+                reactions: [
+                  ...(link.reactions || []),
+                  { emoji: emojiObject.emoji, userId: user?.uid || '' },
+                ],
               }
             : link
         )
@@ -144,6 +161,32 @@ const ChannelView: React.FC = () => {
     } catch (error) {
       console.error('Error adding emoji reaction:', error);
       showToast({ message: 'Failed to add emoji reaction', type: 'error' });
+    }
+  };
+
+  const handleEmojiRemove = async (linkId: string, emoji: string) => {
+    try {
+      await removeEmojiReaction(linkId, emoji, user?.uid);
+      setLinks((prevLinks) =>
+        prevLinks.map((link) =>
+          link.id === linkId
+            ? {
+                ...link,
+                reactions:
+                  link.reactions?.filter(
+                    (reaction) =>
+                      !(
+                        reaction.emoji === emoji &&
+                        reaction.userId === user?.uid
+                      )
+                  ) || [],
+              }
+            : link
+        )
+      );
+    } catch (error) {
+      console.error('Error removing emoji reaction:', error);
+      showToast({ message: 'Failed to remove emoji reaction', type: 'error' });
     }
   };
 
@@ -187,9 +230,9 @@ const ChannelView: React.FC = () => {
       </div>
 
       <ul className="link-list">
-        {links.map((link, index) => (
+        {links.map((link) => (
           <li
-            key={`${link.id}-${index}`}
+            key={link.id}
             className="link-card"
             onClick={(e) => handleCardClick(e, link.url)}>
             <div className="link-card-header">
@@ -258,9 +301,21 @@ const ChannelView: React.FC = () => {
               </div>
               <div className="link-reactions">
                 {link.reactions &&
-                  link.reactions.map((emoji, index) => (
-                    <span key={index} className="reaction">
-                      {emoji}
+                  link.reactions.map((reaction, index) => (
+                    <span
+                      key={index}
+                      className="reaction"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (reaction.userId === user?.uid) {
+                          handleEmojiRemove(link.id, reaction.emoji);
+                        }
+                      }}
+                      style={{
+                        cursor:
+                          reaction.userId === user?.uid ? 'pointer' : 'default',
+                      }}>
+                      {reaction.emoji}
                     </span>
                   ))}
               </div>

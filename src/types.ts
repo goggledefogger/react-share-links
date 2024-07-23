@@ -4,6 +4,11 @@ export interface User {
   email: string;
 }
 
+export interface Reaction {
+  emoji: string;
+  userId: string;
+}
+
 export interface Link {
   id: string;
   channelId: string;
@@ -11,7 +16,7 @@ export interface Link {
   username: string;
   url: string;
   createdAt: number;
-  reactions?: string[];
+  reactions?: Reaction[];
   preview?: {
     title: string;
     description: string;

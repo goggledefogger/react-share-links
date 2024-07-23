@@ -13,13 +13,14 @@ import {
   doc,
   updateDoc,
   arrayUnion,
+  arrayRemove,
   onSnapshot,
   getCountFromServer,
   QueryDocumentSnapshot,
   DocumentData,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { Channel, Link, User } from '../types';
+import { Channel, Link, User, Reaction } from '../types';
 import { isWebUri } from 'valid-url';
 
 const LINK_PREVIEW_API_KEY = process.env.REACT_APP_LINKPREVIEW_API_KEY;
@@ -263,15 +264,40 @@ function useChannels() {
     }
   }
 
-  async function addEmojiReaction(linkId: string, emoji: string) {
+  async function addEmojiReaction(
+    linkId: string,
+    emoji: string,
+    userId: string | undefined
+  ) {
+    if (!userId) throw new Error('User must be logged in to add a reaction');
+
     try {
       const linkRef = doc(db, 'links', linkId);
       await updateDoc(linkRef, {
-        reactions: arrayUnion(emoji),
+        reactions: arrayUnion({ emoji, userId }),
       });
       return true;
     } catch (e) {
       console.error('Error adding emoji reaction: ', e);
+      throw e;
+    }
+  }
+
+  async function removeEmojiReaction(
+    linkId: string,
+    emoji: string,
+    userId: string | undefined
+  ) {
+    if (!userId) throw new Error('User must be logged in to remove a reaction');
+
+    try {
+      const linkRef = doc(db, 'links', linkId);
+      await updateDoc(linkRef, {
+        reactions: arrayRemove({ emoji, userId }),
+      });
+      return true;
+    } catch (e) {
+      console.error('Error removing emoji reaction: ', e);
       throw e;
     }
   }
@@ -299,6 +325,7 @@ function useChannels() {
     addLink,
     deleteLink,
     addEmojiReaction,
+    removeEmojiReaction,
     updateChannel,
   };
 }
