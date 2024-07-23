@@ -1,6 +1,6 @@
 # Share Links
 
-An application for sharing links. Yes, really.
+An application for sharing links. Simple and sweet, don't worry about comments.
 
 ## Features
 
