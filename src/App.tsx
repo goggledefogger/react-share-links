@@ -16,7 +16,11 @@ import './styles/animations.css';
 import './App.css';
 
 const App: React.FC = () => {
-  const { user, profile, signOutUser } = useAuthUser();
+  const { user, profile, signOutUser, loading } = useAuthUser();
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
     <ToastProvider>
