@@ -4,13 +4,11 @@ import { useChannels } from '../../hooks/useChannels';
 import { Channel } from '../../types';
 import Form from '../common/Form';
 import ConfirmDialog from '../common/ConfirmDialog';
-import DropdownMenu from '../common/DropdownMenu';
 import { useToast } from '../../contexts/ToastContext';
 import {
   FaUser,
   FaClock,
   FaHashtag,
-  FaEllipsisV,
   FaLink,
   FaEdit,
   FaTrash,
@@ -50,7 +48,6 @@ const ChannelList: React.FC = () => {
   const handleAddChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
     if (channelName.trim()) {
-      // Check if a channel with this name already exists
       const channelExists = channelList.some(
         (channel) =>
           channel.name.toLowerCase() === channelName.trim().toLowerCase()
@@ -65,7 +62,7 @@ const ChannelList: React.FC = () => {
       }
 
       try {
-        const newChannel = await addChannel(channelName);
+        await addChannel(channelName);
         showToast({ message: 'Channel added successfully', type: 'success' });
       } catch (error) {
         console.error('Error adding channel:', error);
@@ -81,12 +78,10 @@ const ChannelList: React.FC = () => {
   const handleUpdateChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
     if (channelName.trim() && editingChannelId) {
-      // Check if the new name is different from the current name
       const currentChannel = channelList.find(
         (channel) => channel.id === editingChannelId
       );
       if (currentChannel && currentChannel.name !== channelName.trim()) {
-        // Check if another channel already has this name
         const channelExists = channelList.some(
           (channel) =>
             channel.id !== editingChannelId &&
@@ -193,23 +188,26 @@ const ChannelList: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <DropdownMenu
-                  toggleButton={
-                    <button className="btn-icon">
-                      <FaEllipsisV />
-                    </button>
-                  }
-                  options={[
-                    {
-                      icon: <FaEdit />,
-                      action: () => handleEditChannel(channel),
-                    },
-                    {
-                      icon: <FaTrash />,
-                      action: () => handleDeleteClick(channel.id),
-                    },
-                  ]}
-                />
+                <div className="channel-actions">
+                  <button
+                    className="btn-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditChannel(channel);
+                    }}
+                    title="Edit Channel">
+                    <FaEdit />
+                  </button>
+                  <button
+                    className="btn-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClick(channel.id);
+                    }}
+                    title="Delete Channel">
+                    <FaTrash />
+                  </button>
+                </div>
               </>
             )}
           </li>

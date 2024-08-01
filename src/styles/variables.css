@@ -5,11 +5,21 @@
   --secondary-color: #80a89b;
   --secondary-light: #a3c2b8;
   --secondary-dark: #6c9a8b;
+  --error-color: #e57373;
+  --success-color: #81c784;
+  --warning-color: #ffb74d;
+}
+
+.light {
   --background-color: #f0f4f8;
   --surface-color: #f9fbfd;
   --text-color: #2c3e50;
   --text-light: #7f8c8d;
-  --error-color: #e57373;
-  --success-color: #81c784;
-  --warning-color: #ffb74d;
+}
+
+.dark {
+  --background-color: #1a1a1a;
+  --surface-color: #2c2c2c;
+  --text-color: #e0e0e0;
+  --text-light: #b0b0b0;
 }

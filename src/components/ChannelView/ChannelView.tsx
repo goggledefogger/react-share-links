@@ -2,21 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
 import { useAuthUser } from '../../hooks/useAuthUser';
-import { Channel, Link, Reaction } from '../../types';
+import { Channel, Link } from '../../types';
 import { useToast } from '../../contexts/ToastContext';
 import Form from '../common/Form';
 import EmojiPicker from 'emoji-picker-react';
-import DropdownMenu from '../common/DropdownMenu';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { formatRelativeTime } from '../../utils/dateUtils';
-import {
-  FaUser,
-  FaClock,
-  FaLink,
-  FaEllipsisV,
-  FaSmile,
-  FaTrash,
-} from 'react-icons/fa';
+import { FaUser, FaClock, FaLink, FaSmile, FaTrash } from 'react-icons/fa';
 import { QueryDocumentSnapshot } from 'firebase/firestore';
 import './ChannelView.css';
 
@@ -59,6 +51,7 @@ const ChannelView: React.FC = () => {
           await getChannelLinks(id);
         setLinks(fetchedLinks);
         setLastVisible(lastVisibleDoc);
+        setHasMore(fetchedLinks.length === LINKS_PER_PAGE);
       }
     };
 
@@ -71,9 +64,7 @@ const ChannelView: React.FC = () => {
       try {
         const result = await getChannelLinks(id, LINKS_PER_PAGE, lastVisible);
         setLinks((prevLinks) => {
-          // Create a Set of existing IDs
           const existingIds = new Set(prevLinks.map((link) => link.id));
-          // Filter out any new links with duplicate IDs
           const newUniqueLinks = result.links.filter(
             (link) => !existingIds.has(link.id)
           );
@@ -90,10 +81,6 @@ const ChannelView: React.FC = () => {
         setIsLoadingMore(false);
       }
     }
-  };
-
-  const handleLoadMore = () => {
-    fetchLinks();
   };
 
   const handleAddLink = async (formData: { [key: string]: string }) => {
@@ -190,20 +177,19 @@ const ChannelView: React.FC = () => {
     }
   };
 
-  if (!channel) {
-    return <div className="loading">Loading...</div>;
-  }
-
   const handleLinkClick = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleCardClick = (e: React.MouseEvent, url: string) => {
-    // Check if the click target is not part of the dropdown menu
-    if (!(e.target as HTMLElement).closest('.dropdown-menu')) {
+    if (!(e.target as HTMLElement).closest('.link-actions')) {
       handleLinkClick(url);
     }
   };
+
+  if (!channel) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
     <div className="channel-view">
@@ -239,28 +225,25 @@ const ChannelView: React.FC = () => {
               <span className="link-url">
                 <FaLink className="icon" /> {link.url}
               </span>
-              <div className="dropdown-wrapper">
-                <DropdownMenu
-                  toggleButton={
-                    <button className="btn-icon" aria-label="More options">
-                      <FaEllipsisV />
-                    </button>
-                  }
-                  options={[
-                    {
-                      icon: <FaSmile />,
-                      action: () => {
-                        setShowEmojiPicker(link.id);
-                      },
-                    },
-                    {
-                      icon: <FaTrash />,
-                      action: () => {
-                        handleDeleteClick(link.id);
-                      },
-                    },
-                  ]}
-                />
+              <div className="link-actions">
+                <button
+                  className="btn-icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowEmojiPicker(link.id);
+                  }}
+                  title="Add Reaction">
+                  <FaSmile />
+                </button>
+                <button
+                  className="btn-icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(link.id);
+                  }}
+                  title="Delete Link">
+                  <FaTrash />
+                </button>
               </div>
             </div>
             {link.preview && (
@@ -337,7 +320,7 @@ const ChannelView: React.FC = () => {
 
       {hasMore && (
         <button
-          onClick={handleLoadMore}
+          onClick={fetchLinks}
           className="btn btn-secondary load-more-btn"
           disabled={isLoadingMore}>
           {isLoadingMore ? 'Loading...' : 'Load More'}

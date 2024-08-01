@@ -44,10 +44,6 @@
   flex-grow: 1;
 }
 
-.channel-item .dropdown {
-  flex-shrink: 0;
-}
-
 .channel-header {
   display: flex;
   justify-content: space-between;
@@ -71,7 +67,8 @@
 }
 
 .channel-creator,
-.channel-date {
+.channel-date,
+.channel-link-count {
   display: flex;
   align-items: center;
   margin-right: 15px;
@@ -81,18 +78,30 @@
   margin-right: 5px;
 }
 
+.channel-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .btn-icon {
   background: none;
   border: none;
   cursor: pointer;
   padding: 5px;
   color: var(--text-color);
+  font-size: 1.2rem;
+  transition: color 0.2s ease;
+}
+
+.btn-icon:hover {
+  color: var(--primary-color);
 }
 
 .add-channel-form {
-  background-color: var(--background-color);
+  background-color: var(--surface-color);
   padding: 1.5rem;
   border-radius: 4px;
+  margin-top: 2rem;
 }
 
 .add-channel-form h3 {
@@ -112,4 +121,27 @@
 
 .add-channel-form .btn {
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .channel-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .channel-creator,
+  .channel-date,
+  .channel-link-count {
+    margin-right: 0;
+    margin-bottom: 5px;
+  }
+
+  .add-channel-form form {
+    flex-direction: column;
+  }
+
+  .add-channel-form .btn {
+    width: 100%;
+    margin-top: 1rem;
+  }
 }

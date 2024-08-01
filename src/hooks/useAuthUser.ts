@@ -37,11 +37,17 @@ export function useAuthUser() {
               error: null,
             });
           } else {
+            // If the profile doesn't exist, create a default one
+            const defaultProfile: UserProfile = {
+              username: user.displayName || user.email?.split('@')[0] || 'User',
+              email: user.email || '',
+            };
+            await setDoc(doc(db, 'users', user.uid), defaultProfile);
             setAuthUser({
               user,
-              profile: null,
+              profile: defaultProfile,
               loading: false,
-              error: 'User profile not found',
+              error: null,
             });
           }
         } catch (error) {

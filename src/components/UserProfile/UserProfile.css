@@ -1,0 +1,38 @@
+.user-profile {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.user-profile h2 {
+  color: var(--primary-color);
+  margin-bottom: 1.5rem;
+}
+
+.profile-info {
+  margin-bottom: 1.5rem;
+}
+
+.profile-info p {
+  margin-bottom: 0.5rem;
+}
+
+.user-profile .btn {
+  margin-top: 1rem;
+}
+
+.user-profile.loading,
+.user-profile.error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.user-profile.error p {
+  color: var(--error-color);
+  text-align: center;
+}
