@@ -194,10 +194,12 @@
 }
 
 .emoji-picker-container {
-  position: absolute;
-  right: 0;
-  top: 100%;
   z-index: 1000;
+}
+
+.link-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 @media (max-width: 768px) {
@@ -221,5 +223,18 @@
   .add-link-form .btn {
     width: 100%;
     margin-top: 0.5rem;
+  }
+
+  .emoji-picker-container {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100%;
+  }
+
+  .emoji-picker-react {
+    width: 100% !important;
   }
 }

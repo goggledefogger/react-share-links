@@ -72,6 +72,7 @@ const UserProfile: React.FC = () => {
           ]}
           onSubmit={handleSubmit}
           submitButtonText="Save Changes"
+          submitButtonClass="btn btn-primary"
         />
       ) : (
         <div className="profile-info">

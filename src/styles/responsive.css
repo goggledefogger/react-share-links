@@ -1,0 +1,85 @@
+/* Responsive utilities */
+
+/* Hide on small screens */
+@media (max-width: 575.98px) {
+  .hide-sm {
+    display: none !important;
+  }
+}
+
+/* Hide on medium screens */
+@media (min-width: 576px) and (max-width: 767.98px) {
+  .hide-md {
+    display: none !important;
+  }
+}
+
+/* Hide on large screens */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .hide-lg {
+    display: none !important;
+  }
+}
+
+/* Hide on extra large screens */
+@media (min-width: 992px) {
+  .hide-xl {
+    display: none !important;
+  }
+}
+
+/* Flex utilities */
+.flex-column-sm {
+  flex-direction: column;
+}
+
+@media (min-width: 576px) {
+  .flex-column-sm {
+    flex-direction: row;
+  }
+}
+
+/* Grid utilities */
+.grid-1-sm {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 576px) {
+  .grid-2-md {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .grid-3-lg {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .grid-4-xl {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Margin and padding utilities */
+.m-sm-0 {
+  margin: 0 !important;
+}
+
+.p-sm-0 {
+  padding: 0 !important;
+}
+
+@media (min-width: 576px) {
+  .m-md-1 {
+    margin: 0.25rem !important;
+  }
+
+  .p-md-1 {
+    padding: 0.25rem !important;
+  }
+}
+
+/* Add more utilities as needed */

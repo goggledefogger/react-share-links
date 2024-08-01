@@ -1,4 +1,5 @@
 :root {
+  /* Existing color variables */
   --primary-color: #5b8cb7;
   --primary-light: #8bafd0;
   --primary-dark: #3a6ea5;
@@ -8,18 +9,43 @@
   --error-color: #e57373;
   --success-color: #81c784;
   --warning-color: #ffb74d;
+
+  /* Light theme colors */
+  --light-background-color: #f0f4f8;
+  --light-surface-color: #f9fbfd;
+  --light-text-color: #2c3e50;
+  --light-text-light: #7f8c8d;
+
+  /* Dark theme colors */
+  --dark-background-color: #1a1a1a;
+  --dark-surface-color: #2c2c2c;
+  --dark-text-color: #e0e0e0;
+  --dark-text-light: #b0b0b0;
+
+  /* Breakpoints */
+  --breakpoint-sm: 576px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 992px;
+  --breakpoint-xl: 1200px;
+
+  /* Other variables */
+  --header-height: 60px;
+  --sidebar-width: 250px;
+  --content-max-width: 1200px;
 }
 
+/* Light theme */
 .light {
-  --background-color: #f0f4f8;
-  --surface-color: #f9fbfd;
-  --text-color: #2c3e50;
-  --text-light: #7f8c8d;
+  --background-color: var(--light-background-color);
+  --surface-color: var(--light-surface-color);
+  --text-color: var(--light-text-color);
+  --text-light: var(--light-text-light);
 }
 
+/* Dark theme */
 .dark {
-  --background-color: #1a1a1a;
-  --surface-color: #2c2c2c;
-  --text-color: #e0e0e0;
-  --text-light: #b0b0b0;
+  --background-color: var(--dark-background-color);
+  --surface-color: var(--dark-surface-color);
+  --text-color: var(--dark-text-color);
+  --text-light: var(--dark-text-light);
 }

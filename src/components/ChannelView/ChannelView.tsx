@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link as RouterLink } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
 import { useAuthUser } from '../../hooks/useAuthUser';
@@ -57,6 +57,28 @@ const ChannelView: React.FC = () => {
 
     fetchChannelAndLinks();
   }, [id, getChannel, getChannelLinks]);
+
+  const [emojiPickerPosition, setEmojiPickerPosition] = useState({
+    top: 0,
+    left: 0,
+  });
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const fetchLinks = async () => {
     if (id) {
@@ -123,6 +145,21 @@ const ChannelView: React.FC = () => {
 
   const handleDeleteCancel = () => {
     setDeleteConfirmation({ isOpen: false, linkId: null });
+  };
+
+  const handleEmojiButtonClick = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    linkId: string
+  ) => {
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const scrollY = window.scrollY || window.pageYOffset;
+
+    setEmojiPickerPosition({
+      top: rect.bottom + scrollY,
+      left: rect.left,
+    });
+    setShowEmojiPicker(linkId);
   };
 
   const handleEmojiClick = async (
@@ -230,7 +267,7 @@ const ChannelView: React.FC = () => {
                   className="btn-icon"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowEmojiPicker(link.id);
+                    handleEmojiButtonClick(e, link.id);
                   }}
                   title="Add Reaction">
                   <FaSmile />
@@ -303,13 +340,19 @@ const ChannelView: React.FC = () => {
                   ))}
               </div>
             </div>
-            {showEmojiPicker === link.id && (
+            {showEmojiPicker && (
               <div
+                ref={emojiPickerRef}
                 className="emoji-picker-container"
+                style={{
+                  position: 'absolute',
+                  top: `${emojiPickerPosition.top}px`,
+                  left: `${emojiPickerPosition.left}px`,
+                }}
                 onClick={(e) => e.stopPropagation()}>
                 <EmojiPicker
                   onEmojiClick={(emojiObject) =>
-                    handleEmojiClick(link.id, emojiObject)
+                    handleEmojiClick(showEmojiPicker, emojiObject)
                   }
                 />
               </div>
