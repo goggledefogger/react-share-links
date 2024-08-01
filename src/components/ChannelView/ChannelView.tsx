@@ -41,6 +41,11 @@ const ChannelView: React.FC = () => {
   >(undefined);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [emojiPickerPosition, setEmojiPickerPosition] = useState({
+    top: 0,
+    left: 0,
+  });
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchChannelAndLinks = async () => {
@@ -57,12 +62,6 @@ const ChannelView: React.FC = () => {
 
     fetchChannelAndLinks();
   }, [id, getChannel, getChannelLinks]);
-
-  const [emojiPickerPosition, setEmojiPickerPosition] = useState({
-    top: 0,
-    left: 0,
-  });
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -147,21 +146,6 @@ const ChannelView: React.FC = () => {
     setDeleteConfirmation({ isOpen: false, linkId: null });
   };
 
-  const handleEmojiButtonClick = (
-    event: React.MouseEvent<HTMLButtonElement>,
-    linkId: string
-  ) => {
-    const button = event.currentTarget;
-    const rect = button.getBoundingClientRect();
-    const scrollY = window.scrollY || window.pageYOffset;
-
-    setEmojiPickerPosition({
-      top: rect.bottom + scrollY,
-      left: rect.left,
-    });
-    setShowEmojiPicker(linkId);
-  };
-
   const handleEmojiClick = async (
     linkId: string,
     emojiObject: { emoji: string }
@@ -222,6 +206,21 @@ const ChannelView: React.FC = () => {
     if (!(e.target as HTMLElement).closest('.link-actions')) {
       handleLinkClick(url);
     }
+  };
+
+  const handleEmojiButtonClick = (
+    event: React.MouseEvent<HTMLButtonElement>,
+    linkId: string
+  ) => {
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const scrollY = window.scrollY || window.pageYOffset;
+
+    setEmojiPickerPosition({
+      top: rect.bottom + scrollY,
+      left: rect.left,
+    });
+    setShowEmojiPicker(linkId);
   };
 
   if (!channel) {
@@ -340,26 +339,27 @@ const ChannelView: React.FC = () => {
                   ))}
               </div>
             </div>
-            {showEmojiPicker && (
-              <div
-                ref={emojiPickerRef}
-                className="emoji-picker-container"
-                style={{
-                  position: 'absolute',
-                  top: `${emojiPickerPosition.top}px`,
-                  left: `${emojiPickerPosition.left}px`,
-                }}
-                onClick={(e) => e.stopPropagation()}>
-                <EmojiPicker
-                  onEmojiClick={(emojiObject) =>
-                    handleEmojiClick(showEmojiPicker, emojiObject)
-                  }
-                />
-              </div>
-            )}
           </li>
         ))}
       </ul>
+
+      {showEmojiPicker && (
+        <div
+          ref={emojiPickerRef}
+          className="emoji-picker-container"
+          style={{
+            position: 'absolute',
+            top: `${emojiPickerPosition.top}px`,
+            left: `${emojiPickerPosition.left}px`,
+          }}
+          onClick={(e) => e.stopPropagation()}>
+          <EmojiPicker
+            onEmojiClick={(emojiObject) =>
+              handleEmojiClick(showEmojiPicker, emojiObject)
+            }
+          />
+        </div>
+      )}
 
       {hasMore && (
         <button

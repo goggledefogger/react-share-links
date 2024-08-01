@@ -2,7 +2,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-  background-color: var(--background-color);
+  background-color: var(--surface-color);
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -19,6 +19,11 @@
   color: var(--primary-color);
   text-decoration: none;
   font-weight: 500;
+  transition: color 0.3s;
+}
+
+.back-link:hover {
+  color: var(--primary-dark);
 }
 
 .add-link-form {
@@ -62,13 +67,12 @@
   border-radius: 8px;
   padding: 15px;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   cursor: pointer;
 }
 
 .link-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  background-color: var(--surface-color);
+  transform: translateY(-2px);
 }
 
 .link-card-header {
@@ -88,6 +92,30 @@
   margin-right: 10px;
   display: flex;
   align-items: center;
+}
+
+.link-url .icon {
+  margin-right: 8px;
+}
+
+.link-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color);
+  font-size: 1.2rem;
+  padding: 5px;
+  transition: color 0.3s, transform 0.1s;
+}
+
+.btn-icon:hover {
+  color: var(--primary-color);
+  transform: scale(1.1);
 }
 
 .link-preview {
@@ -142,23 +170,6 @@
   margin-top: 5px;
 }
 
-.dropdown-wrapper {
-  position: relative;
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  color: var(--text-color);
-  font-size: 1.2rem;
-}
-
-.link-url .icon {
-  margin-right: 8px;
-}
-
 .link-card-content {
   display: flex;
   justify-content: space-between;
@@ -191,15 +202,22 @@
 .reaction {
   font-size: 1.2em;
   margin-left: 5px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.reaction:hover {
+  transform: scale(1.2);
 }
 
 .emoji-picker-container {
   z-index: 1000;
 }
 
-.link-actions {
-  display: flex;
-  gap: 0.5rem;
+.load-more-btn {
+  display: block;
+  margin: 20px auto;
+  padding: 10px 20px;
 }
 
 @media (max-width: 768px) {
