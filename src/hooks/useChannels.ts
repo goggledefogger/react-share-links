@@ -87,21 +87,28 @@ function useChannels() {
     }
 
     try {
-      // Fetch link preview
-      const preview = await fetchLinkPreview(validatedUrl);
-
-      const newLink = {
+      const newLink: Omit<Link, 'id'> = {
         channelId,
         userId: user.uid,
         url: validatedUrl,
-        emoji: emoji || null,
         createdAt: Date.now(),
-        preview,
+        preview: null,
+        reactions: [],
       };
 
       const docRef = await addDoc(collection(db, 'links'), newLink);
+      const linkWithId: Link = { id: docRef.id, ...newLink };
 
-      return { id: docRef.id, ...newLink } as Link;
+      // Fetch link preview asynchronously
+      fetchLinkPreview(validatedUrl).then(async (preview) => {
+        if (preview) {
+          await updateDoc(docRef, { preview });
+          return { ...linkWithId, preview };
+        }
+        return linkWithId;
+      });
+
+      return linkWithId;
     } catch (e) {
       console.error('Error adding link: ', e);
       throw e;

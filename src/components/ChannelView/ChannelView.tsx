@@ -5,10 +5,8 @@ import { useAuthUser } from '../../hooks/useAuthUser';
 import { Channel, Link } from '../../types';
 import { useToast } from '../../contexts/ToastContext';
 import Form from '../common/Form';
-import EmojiPicker from 'emoji-picker-react';
 import ConfirmDialog from '../common/ConfirmDialog';
-import { formatRelativeTime } from '../../utils/dateUtils';
-import { FaUser, FaClock, FaLink, FaSmile, FaTrash } from 'react-icons/fa';
+import LinkItem from '../LinkItem/LinkItem';
 import { QueryDocumentSnapshot } from 'firebase/firestore';
 import './ChannelView.css';
 
@@ -18,7 +16,6 @@ const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [channel, setChannel] = useState<Channel | null>(null);
   const [links, setLinks] = useState<Link[]>([]);
-  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
   const {
     getChannel,
     getChannelLinks,
@@ -41,11 +38,6 @@ const ChannelView: React.FC = () => {
   >(undefined);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [emojiPickerPosition, setEmojiPickerPosition] = useState({
-    top: 0,
-    left: 0,
-  });
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchChannelAndLinks = async () => {
@@ -62,22 +54,6 @@ const ChannelView: React.FC = () => {
 
     fetchChannelAndLinks();
   }, [id, getChannel, getChannelLinks]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target as Node)
-      ) {
-        setShowEmojiPicker(null);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const fetchLinks = async () => {
     if (id) {
@@ -158,12 +134,9 @@ const ChannelView: React.FC = () => {
     setDeleteConfirmation({ isOpen: false, linkId: null });
   };
 
-  const handleEmojiClick = async (
-    linkId: string,
-    emojiObject: { emoji: string }
-  ) => {
+  const handleReact = async (linkId: string, emoji: string) => {
     try {
-      await addEmojiReaction(linkId, emojiObject.emoji, user?.uid);
+      await addEmojiReaction(linkId, emoji, user?.uid);
       setLinks((prevLinks) =>
         prevLinks.map((link) =>
           link.id === linkId
@@ -171,20 +144,19 @@ const ChannelView: React.FC = () => {
                 ...link,
                 reactions: [
                   ...(link.reactions || []),
-                  { emoji: emojiObject.emoji, userId: user?.uid || '' },
+                  { emoji, userId: user?.uid || '' },
                 ],
               }
             : link
         )
       );
-      setShowEmojiPicker(null);
     } catch (error) {
       console.error('Error adding emoji reaction:', error);
       showToast({ message: 'Failed to add emoji reaction', type: 'error' });
     }
   };
 
-  const handleEmojiRemove = async (linkId: string, emoji: string) => {
+  const handleRemoveReaction = async (linkId: string, emoji: string) => {
     try {
       await removeEmojiReaction(linkId, emoji, user?.uid);
       setLinks((prevLinks) =>
@@ -208,31 +180,6 @@ const ChannelView: React.FC = () => {
       console.error('Error removing emoji reaction:', error);
       showToast({ message: 'Failed to remove emoji reaction', type: 'error' });
     }
-  };
-
-  const handleLinkClick = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleCardClick = (e: React.MouseEvent, url: string) => {
-    if (!(e.target as HTMLElement).closest('.link-actions')) {
-      handleLinkClick(url);
-    }
-  };
-
-  const handleEmojiButtonClick = (
-    event: React.MouseEvent<HTMLButtonElement>,
-    linkId: string
-  ) => {
-    const button = event.currentTarget;
-    const rect = button.getBoundingClientRect();
-    const scrollY = window.scrollY || window.pageYOffset;
-
-    setEmojiPickerPosition({
-      top: rect.bottom + scrollY,
-      left: rect.left,
-    });
-    setShowEmojiPicker(linkId);
   };
 
   if (!channel) {
@@ -265,115 +212,16 @@ const ChannelView: React.FC = () => {
 
       <ul className="link-list">
         {links.map((link) => (
-          <li
-            key={link.id}
-            className="link-card"
-            onClick={(e) => handleCardClick(e, link.url)}>
-            <div className="link-card-header">
-              <span className="link-url">
-                <FaLink className="icon" /> {link.url}
-              </span>
-              <div className="link-actions">
-                <button
-                  className="btn-icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEmojiButtonClick(e, link.id);
-                  }}
-                  title="Add Reaction">
-                  <FaSmile />
-                </button>
-                {link.userId === user?.uid && (
-                  <button
-                    className="btn-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteClick(link.id);
-                    }}
-                    title="Delete Link">
-                    <FaTrash />
-                  </button>
-                )}
-              </div>
-            </div>
-            {link.preview && (
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link-preview">
-                {link.preview.image && (
-                  <img
-                    src={link.preview.image}
-                    alt={link.preview.title || 'Link preview'}
-                    className="link-thumbnail"
-                  />
-                )}
-                <div className="link-metadata">
-                  <h3 className="link-title">{link.preview.title}</h3>
-                  <p className="link-description">{link.preview.description}</p>
-                  {link.preview.favicon && (
-                    <img
-                      src={link.preview.favicon}
-                      alt="Favicon"
-                      className="link-favicon"
-                    />
-                  )}
-                </div>
-              </a>
-            )}
-            <div className="link-card-content">
-              <div className="link-meta">
-                <span className="link-author">
-                  <FaUser className="icon" /> {link.username}
-                </span>
-                <span className="link-date">
-                  <FaClock className="icon" />{' '}
-                  {formatRelativeTime(link.createdAt)}
-                </span>
-              </div>
-              <div className="link-reactions">
-                {link.reactions &&
-                  link.reactions.map((reaction, index) => (
-                    <span
-                      key={index}
-                      className="reaction"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (reaction.userId === user?.uid) {
-                          handleEmojiRemove(link.id, reaction.emoji);
-                        }
-                      }}
-                      style={{
-                        cursor:
-                          reaction.userId === user?.uid ? 'pointer' : 'default',
-                      }}>
-                      {reaction.emoji}
-                    </span>
-                  ))}
-              </div>
-            </div>
+          <li key={link.id}>
+            <LinkItem
+              link={link}
+              onDelete={handleDeleteClick}
+              onReact={handleReact}
+              onRemoveReaction={handleRemoveReaction}
+            />
           </li>
         ))}
       </ul>
-
-      {showEmojiPicker && (
-        <div
-          ref={emojiPickerRef}
-          className="emoji-picker-container"
-          style={{
-            position: 'absolute',
-            top: `${emojiPickerPosition.top}px`,
-            left: `${emojiPickerPosition.left}px`,
-          }}
-          onClick={(e) => e.stopPropagation()}>
-          <EmojiPicker
-            onEmojiClick={(emojiObject) =>
-              handleEmojiClick(showEmojiPicker, emojiObject)
-            }
-          />
-        </div>
-      )}
 
       {hasMore && (
         <button

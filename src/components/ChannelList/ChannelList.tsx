@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
+import { useAuthUser } from '../../hooks/useAuthUser';
 import { Channel } from '../../types';
 import Form from '../common/Form';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -26,6 +27,7 @@ const ChannelList: React.FC = () => {
     getAllChannelLinkCounts,
     getUsernameById,
   } = useChannels();
+  const { user } = useAuthUser();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
@@ -204,26 +206,28 @@ const ChannelList: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <div className="channel-actions">
-                  <button
-                    className="btn-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditChannel(channel);
-                    }}
-                    title="Edit Channel">
-                    <FaEdit />
-                  </button>
-                  <button
-                    className="btn-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteClick(channel.id);
-                    }}
-                    title="Delete Channel">
-                    <FaTrash />
-                  </button>
-                </div>
+                {channel.createdBy === user?.uid && (
+                  <div className="channel-actions">
+                    <button
+                      className="btn-icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditChannel(channel);
+                      }}
+                      title="Edit Channel">
+                      <FaEdit />
+                    </button>
+                    <button
+                      className="btn-icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(channel.id);
+                      }}
+                      title="Delete Channel">
+                      <FaTrash />
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </li>

@@ -15,14 +15,14 @@ export interface Link {
   userId: string;
   url: string;
   createdAt: number;
-  username?: string;
-  reactions?: Reaction[];
-  preview?: {
+  preview: {
     title: string;
     description: string;
     image: string;
     favicon: string;
-  };
+  } | null;
+  reactions: Reaction[];
+  username?: string;
 }
 
 export interface Channel {
