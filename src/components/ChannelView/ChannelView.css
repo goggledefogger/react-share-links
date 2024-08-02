@@ -138,6 +138,7 @@
   width: 120px;
   height: 90px;
   object-fit: cover;
+  background-color: var(--surface-light);
 }
 
 .link-metadata {
@@ -255,4 +256,8 @@
   .emoji-picker-react {
     width: 100% !important;
   }
+}
+
+.dark .link-thumbnail {
+  background-color: var(--light-surface-color);
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, signOut, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 interface UserProfile {
@@ -97,7 +97,7 @@ export function useAuthUser() {
 
     try {
       const userRef = doc(db, 'users', authUser.user.uid);
-      await setDoc(userRef, newProfile, { merge: true });
+      await updateDoc(userRef, newProfile);
 
       if (newProfile.username) {
         await updateProfile(authUser.user, {

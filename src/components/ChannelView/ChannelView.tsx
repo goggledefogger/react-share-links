@@ -123,7 +123,15 @@ const ChannelView: React.FC = () => {
   };
 
   const handleDeleteClick = (linkId: string) => {
-    setDeleteConfirmation({ isOpen: true, linkId });
+    const link = links.find((l) => l.id === linkId);
+    if (link && link.userId === user?.uid) {
+      setDeleteConfirmation({ isOpen: true, linkId });
+    } else {
+      showToast({
+        message: "You don't have permission to delete this link",
+        type: 'error',
+      });
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -136,7 +144,11 @@ const ChannelView: React.FC = () => {
         showToast({ message: 'Link deleted successfully', type: 'success' });
       } catch (error) {
         console.error('Error deleting link:', error);
-        showToast({ message: 'Failed to delete link', type: 'error' });
+        showToast({
+          message:
+            error instanceof Error ? error.message : 'Failed to delete link',
+          type: 'error',
+        });
       }
       setDeleteConfirmation({ isOpen: false, linkId: null });
     }
@@ -271,15 +283,17 @@ const ChannelView: React.FC = () => {
                   title="Add Reaction">
                   <FaSmile />
                 </button>
-                <button
-                  className="btn-icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteClick(link.id);
-                  }}
-                  title="Delete Link">
-                  <FaTrash />
-                </button>
+                {link.userId === user?.uid && (
+                  <button
+                    className="btn-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClick(link.id);
+                    }}
+                    title="Delete Link">
+                    <FaTrash />
+                  </button>
+                )}
               </div>
             </div>
             {link.preview && (

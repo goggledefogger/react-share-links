@@ -13,9 +13,9 @@ export interface Link {
   id: string;
   channelId: string;
   userId: string;
-  username: string;
   url: string;
   createdAt: number;
+  username?: string;
   reactions?: Reaction[];
   preview?: {
     title: string;

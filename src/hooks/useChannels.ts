@@ -66,7 +66,18 @@ function useChannels() {
     return counts;
   }, [channelList]);
 
-  async function addLink(channelId: string, url: string, emoji?: string) {
+  const getUsernameById = useCallback(
+    async (userId: string): Promise<string> => {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        return userDoc.data().username;
+      }
+      return 'Unknown User';
+    },
+    []
+  );
+
+  const addLink = async (channelId: string, url: string, emoji?: string) => {
     const user = auth.currentUser;
     if (!user) throw new Error('User must be logged in to add a link');
 
@@ -76,22 +87,12 @@ function useChannels() {
     }
 
     try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data() as User | undefined;
-
-      const username =
-        userData?.username ||
-        user.displayName ||
-        user.email?.split('@')[0] ||
-        'Anonymous';
-
       // Fetch link preview
       const preview = await fetchLinkPreview(validatedUrl);
 
       const newLink = {
         channelId,
         userId: user.uid,
-        username,
         url: validatedUrl,
         emoji: emoji || null,
         createdAt: Date.now(),
@@ -105,7 +106,7 @@ function useChannels() {
       console.error('Error adding link: ', e);
       throw e;
     }
-  }
+  };
 
   async function fetchLinkPreview(url: string) {
     if (!LINK_PREVIEW_API_KEY) {
@@ -208,14 +209,14 @@ function useChannels() {
     }
   }
 
-  async function getChannelLinks(
+  const getChannelLinks = async (
     channelId: string,
     limitCount = 20,
     lastVisible?: QueryDocumentSnapshot<Link>
   ): Promise<{
     links: Link[];
     lastVisible: QueryDocumentSnapshot<Link> | undefined;
-  }> {
+  }> => {
     try {
       const linksCollection = collection(db, 'links');
       let q = query(
@@ -230,8 +231,12 @@ function useChannels() {
       }
 
       const querySnapshot = await getDocs(q);
-      const links = querySnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Link)
+      const links = await Promise.all(
+        querySnapshot.docs.map(async (doc) => {
+          const linkData = doc.data() as Omit<Link, 'id'>;
+          const username = await getUsernameById(linkData.userId);
+          return { id: doc.id, ...linkData, username };
+        })
       );
 
       const lastVisibleDoc = querySnapshot.docs[
@@ -246,7 +251,7 @@ function useChannels() {
       console.error('Error fetching channel links:', error);
       throw new Error('Failed to fetch channel links');
     }
-  }
+  };
 
   function isValidEmoji(emoji: string): boolean {
     // Basic emoji validation (you might want to use a library for more comprehensive validation)
@@ -255,12 +260,27 @@ function useChannels() {
   }
 
   async function deleteLink(linkId: string) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User must be logged in to delete a link');
+
     try {
-      await deleteDoc(doc(db, 'links', linkId));
+      const linkRef = doc(db, 'links', linkId);
+      const linkDoc = await getDoc(linkRef);
+
+      if (!linkDoc.exists()) {
+        throw new Error('Link not found');
+      }
+
+      const linkData = linkDoc.data();
+      if (linkData.userId !== user.uid) {
+        throw new Error('You do not have permission to delete this link');
+      }
+
+      await deleteDoc(linkRef);
       return true;
     } catch (error) {
       console.error('Error deleting link:', error);
-      return false;
+      throw error;
     }
   }
 
@@ -327,6 +347,7 @@ function useChannels() {
     addEmojiReaction,
     removeEmojiReaction,
     updateChannel,
+    getUsernameById,
   };
 }
 

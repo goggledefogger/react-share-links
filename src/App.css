@@ -61,6 +61,7 @@ h6 {
 .logo {
   height: 40px;
   margin-right: 1rem;
+  transition: filter 0.3s ease;
 }
 
 .App-header h1 {
@@ -258,6 +259,10 @@ select:focus-visible {
   --input-text-color: #e0e0e0;
   --input-border-color: #555;
   --input-focus-border-color: #7a7a7a;
+}
+
+.dark .logo {
+  filter: invert(1) brightness(1.5);
 }
 
 .dark .input,

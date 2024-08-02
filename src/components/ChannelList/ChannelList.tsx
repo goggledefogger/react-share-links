@@ -24,6 +24,7 @@ const ChannelList: React.FC = () => {
     deleteChannel,
     updateChannel,
     getAllChannelLinkCounts,
+    getUsernameById,
   } = useChannels();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -35,6 +36,10 @@ const ChannelList: React.FC = () => {
   });
   const [linkCounts, setLinkCounts] = useState<{ [key: string]: number }>({});
   const { showToast } = useToast();
+  const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
+  const [creatorUsernames, setCreatorUsernames] = useState<{
+    [key: string]: string;
+  }>({});
 
   useEffect(() => {
     const fetchLinkCounts = async () => {
@@ -42,8 +47,18 @@ const ChannelList: React.FC = () => {
       setLinkCounts(counts);
     };
 
+    const fetchCreatorUsernames = async () => {
+      const usernames: { [key: string]: string } = {};
+      for (const channel of channelList) {
+        usernames[channel.id] = await getUsernameById(channel.createdBy);
+      }
+      setCreatorUsernames(usernames);
+    };
+
     fetchLinkCounts();
-  }, [getAllChannelLinkCounts]);
+    fetchCreatorUsernames();
+    setFilteredChannels(channelList);
+  }, [getAllChannelLinkCounts, channelList, getUsernameById]);
 
   const handleAddChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
@@ -140,7 +155,7 @@ const ChannelList: React.FC = () => {
     <div className="channel-list">
       <h2>Channels</h2>
       <ul className="channel-items">
-        {channelList.map((channel: Channel) => (
+        {filteredChannels.map((channel: Channel) => (
           <li key={channel.id} className="channel-item">
             {editingChannelId === channel.id ? (
               <Form
@@ -173,7 +188,8 @@ const ChannelList: React.FC = () => {
                   </div>
                   <div className="channel-meta">
                     <span className="channel-creator">
-                      <FaUser className="icon" /> {channel.creatorUsername}
+                      <FaUser className="icon" />{' '}
+                      {creatorUsernames[channel.id] || 'Loading...'}
                     </span>
                     <span className="channel-date">
                       <FaClock className="icon" />{' '}
