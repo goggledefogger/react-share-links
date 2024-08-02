@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
 import { useAuthUser } from '../../hooks/useAuthUser';
@@ -21,6 +21,8 @@ const ChannelList: React.FC = () => {
   const navigate = useNavigate();
   const {
     channelList,
+    loading,
+    error,
     addChannel,
     deleteChannel,
     updateChannel,
@@ -43,30 +45,53 @@ const ChannelList: React.FC = () => {
     [key: string]: string;
   }>({});
 
-  useEffect(() => {
-    const fetchLinkCounts = async () => {
-      const counts = await getAllChannelLinkCounts();
-      setLinkCounts(counts);
-    };
-
-    const fetchCreatorUsernames = async () => {
-      const usernames: { [key: string]: string } = {};
-      for (const channel of channelList) {
-        usernames[channel.id] = await getUsernameById(channel.createdBy);
+  const fetchLinkCounts = useCallback(async () => {
+    const counts = await getAllChannelLinkCounts();
+    setLinkCounts((prevCounts) => {
+      // Only update if the counts have changed
+      if (JSON.stringify(prevCounts) !== JSON.stringify(counts)) {
+        return counts;
       }
-      setCreatorUsernames(usernames);
-    };
+      return prevCounts;
+    });
+  }, [getAllChannelLinkCounts]);
 
-    fetchLinkCounts();
-    fetchCreatorUsernames();
+  const fetchCreatorUsernames = useCallback(async () => {
+    const usernames: { [key: string]: string } = {};
+    for (const channel of channelList) {
+      usernames[channel.id] = await getUsernameById(channel.createdBy);
+    }
+    setCreatorUsernames((prevUsernames) => {
+      // Only update if the usernames have changed
+      if (JSON.stringify(prevUsernames) !== JSON.stringify(usernames)) {
+        return usernames;
+      }
+      return prevUsernames;
+    });
+  }, [channelList, getUsernameById]);
+
+  useEffect(() => {
+    if (!loading && !error && channelList.length > 0) {
+      fetchLinkCounts();
+      fetchCreatorUsernames();
+    }
+  }, [
+    loading,
+    error,
+    channelList.length,
+    fetchLinkCounts,
+    fetchCreatorUsernames,
+  ]);
+
+  useEffect(() => {
     setFilteredChannels(channelList);
-  }, [getAllChannelLinkCounts, channelList, getUsernameById]);
+  }, [channelList]);
 
   const handleAddChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
     if (channelName.trim()) {
       const channelExists = channelList.some(
-        (channel) =>
+        (channel: Channel) =>
           channel.name.toLowerCase() === channelName.trim().toLowerCase()
       );
 
@@ -96,11 +121,11 @@ const ChannelList: React.FC = () => {
     const { channelName } = formData;
     if (channelName.trim() && editingChannelId) {
       const currentChannel = channelList.find(
-        (channel) => channel.id === editingChannelId
+        (channel: Channel) => channel.id === editingChannelId
       );
       if (currentChannel && currentChannel.name !== channelName.trim()) {
         const channelExists = channelList.some(
-          (channel) =>
+          (channel: Channel) =>
             channel.id !== editingChannelId &&
             channel.name.toLowerCase() === channelName.trim().toLowerCase()
         );
@@ -152,6 +177,14 @@ const ChannelList: React.FC = () => {
   const handleChannelClick = (channelId: string) => {
     navigate(`/channel/${channelId}`);
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error loading channels: {error}</div>;
+  }
 
   return (
     <div className="channel-list">

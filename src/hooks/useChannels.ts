@@ -17,13 +17,10 @@ import {
   onSnapshot,
   getCountFromServer,
   QueryDocumentSnapshot,
-  DocumentData,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { Channel, Link, User, Reaction } from '../types';
-import { isWebUri } from 'valid-url';
-
-const LINK_PREVIEW_API_KEY = process.env.REACT_APP_LINKPREVIEW_API_KEY;
+import { Channel, Link, User } from '../types';
+import { logFirestoreOperation } from '../utils/firestoreLogger';
 
 function useChannels() {
   const [channelList, setChannelList] = useState<Channel[]>([]);
@@ -32,13 +29,25 @@ function useChannels() {
 
   useEffect(() => {
     const channelsCollection = collection(db, 'channels');
+    logFirestoreOperation('read', 'Listening to channels collection');
+
+    // Track the unsubscribe function to clean up on unmount
     const unsubscribe = onSnapshot(
       query(channelsCollection, orderBy('createdAt', 'desc')),
       (snapshot) => {
         const updatedChannels = snapshot.docs.map(
           (doc) => ({ id: doc.id, ...doc.data() } as Channel)
         );
-        setChannelList(updatedChannels);
+
+        setChannelList((prevChannels) => {
+          if (
+            JSON.stringify(prevChannels) !== JSON.stringify(updatedChannels)
+          ) {
+            return updatedChannels;
+          }
+          return prevChannels;
+        });
+
         setLoading(false);
       },
       (err) => {
@@ -59,6 +68,10 @@ function useChannels() {
     for (const channel of channelList) {
       const linksCollection = collection(db, 'links');
       const q = query(linksCollection, where('channelId', '==', channel.id));
+      logFirestoreOperation(
+        'read',
+        `Getting link count for channel ${channel.id}`
+      );
       const snapshot = await getCountFromServer(q);
       counts[channel.id] = snapshot.data().count;
     }
@@ -66,42 +79,31 @@ function useChannels() {
     return counts;
   }, [channelList]);
 
-  const getUsernameById = useCallback(
-    async (userId: string): Promise<string> => {
-      const userDoc = await getDoc(doc(db, 'users', userId));
-      if (userDoc.exists()) {
-        return userDoc.data().username;
-      }
-      return 'Unknown User';
-    },
-    []
-  );
-
-  const addLink = async (channelId: string, url: string, emoji?: string) => {
+  const addLink = async (channelId: string, url: string) => {
     const user = auth.currentUser;
     if (!user) throw new Error('User must be logged in to add a link');
-
-    const validatedUrl = validateAndFormatUrl(url);
-    if (!validatedUrl) {
-      throw new Error('Invalid URL. Please enter a valid web address.');
-    }
 
     try {
       const newLink: Omit<Link, 'id'> = {
         channelId,
         userId: user.uid,
-        url: validatedUrl,
+        url,
         createdAt: Date.now(),
         preview: null,
         reactions: [],
       };
 
+      logFirestoreOperation('write', `Adding new link to channel ${channelId}`);
       const docRef = await addDoc(collection(db, 'links'), newLink);
       const linkWithId: Link = { id: docRef.id, ...newLink };
 
       // Fetch link preview asynchronously
-      fetchLinkPreview(validatedUrl).then(async (preview) => {
+      fetchLinkPreview(url).then(async (preview) => {
         if (preview) {
+          logFirestoreOperation(
+            'write',
+            `Updating link ${docRef.id} with preview`
+          );
           await updateDoc(docRef, { preview });
           return { ...linkWithId, preview };
         }
@@ -116,6 +118,7 @@ function useChannels() {
   };
 
   async function fetchLinkPreview(url: string) {
+    const LINK_PREVIEW_API_KEY = process.env.REACT_APP_LINKPREVIEW_API_KEY;
     if (!LINK_PREVIEW_API_KEY) {
       console.error('LinkPreview API key is not set');
       return null;
@@ -139,30 +142,30 @@ function useChannels() {
       };
     } catch (error) {
       console.error('Error fetching link preview:', error);
-      // Fall back to extracting information from the URL
-      const urlObject = new URL(url);
-      return {
-        title: urlObject.hostname,
-        description: url,
-        image: `https://www.google.com/s2/favicons?domain=${urlObject.hostname}&sz=64`,
-        favicon: `https://www.google.com/s2/favicons?domain=${urlObject.hostname}`,
-      };
+      return null;
     }
   }
 
   function validateAndFormatUrl(url: string): string | null {
-    // Ensure the URL starts with a protocol
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
     }
 
-    // Use valid-url library to check if it's a valid web URI
-    if (isWebUri(url)) {
+    try {
+      new URL(url);
       return url;
+    } catch {
+      return null;
     }
-
-    return null;
   }
+
+  const getUsernameById = async (userId: string): Promise<string> => {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      return userDoc.data().username || 'Unknown User';
+    }
+    return 'Unknown User';
+  };
 
   async function addChannel(channelName: string, description?: string) {
     const user = auth.currentUser;
