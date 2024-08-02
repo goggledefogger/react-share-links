@@ -40,7 +40,11 @@
 
 .link-actions {
   display: flex;
-  gap: 10px;
+  align-items: center;
+}
+
+.emoji-button-container {
+  position: relative;
 }
 
 .btn-icon {
@@ -174,7 +178,14 @@
   top: 100%;
   right: 0;
   z-index: 1000;
-  margin-top: 5px;
+}
+
+.emoji-picker-react {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  z-index: 1001 !important;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.12);
 }
 
 @media (max-width: 768px) {
@@ -197,10 +208,14 @@
     bottom: 0;
     left: 0;
     right: 0;
-    margin-top: 0;
   }
 
   .emoji-picker-react {
     width: 100% !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
   }
 }

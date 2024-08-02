@@ -76,13 +76,23 @@ const LinkItem: React.FC<LinkItemProps> = ({
           <FaLink className="icon" /> {link.url}
         </span>
         <div className="link-actions">
-          <button
-            ref={emojiButtonRef}
-            className="btn-icon"
-            onClick={handleEmojiButtonClick}
-            title="Add Reaction">
-            <FaSmile />
-          </button>
+          <div className="emoji-button-container">
+            <button
+              ref={emojiButtonRef}
+              className="btn-icon"
+              onClick={handleEmojiButtonClick}
+              title="Add Reaction">
+              <FaSmile />
+            </button>
+            {showEmojiPicker && (
+              <div
+                ref={emojiPickerRef}
+                className="emoji-picker-container"
+                onClick={(e) => e.stopPropagation()}>
+                <EmojiPicker onEmojiClick={handleEmojiClick} />
+              </div>
+            )}
+          </div>
           {link.userId === user?.uid && (
             <button
               className="btn-icon"
@@ -155,14 +165,6 @@ const LinkItem: React.FC<LinkItemProps> = ({
             ))}
         </div>
       </div>
-      {showEmojiPicker && (
-        <div
-          ref={emojiPickerRef}
-          className="emoji-picker-container"
-          onClick={(e) => e.stopPropagation()}>
-          <EmojiPicker onEmojiClick={handleEmojiClick} />
-        </div>
-      )}
     </div>
   );
 };
