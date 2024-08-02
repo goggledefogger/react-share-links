@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useChannels } from '../../hooks/useChannels';
 import { useAuthUser } from '../../hooks/useAuthUser';
@@ -45,6 +45,9 @@ const ChannelList: React.FC = () => {
     [key: string]: string;
   }>({});
 
+  // Memoize channels to avoid recalculations
+  const memoizedChannelList = useMemo(() => channelList, [channelList]);
+
   const fetchLinkCounts = useCallback(async () => {
     const counts = await getAllChannelLinkCounts();
     setLinkCounts((prevCounts) => {
@@ -58,7 +61,7 @@ const ChannelList: React.FC = () => {
 
   const fetchCreatorUsernames = useCallback(async () => {
     const usernames: { [key: string]: string } = {};
-    for (const channel of channelList) {
+    for (const channel of memoizedChannelList) {
       usernames[channel.id] = await getUsernameById(channel.createdBy);
     }
     setCreatorUsernames((prevUsernames) => {
@@ -68,24 +71,29 @@ const ChannelList: React.FC = () => {
       }
       return prevUsernames;
     });
-  }, [channelList, getUsernameById]);
+  }, [memoizedChannelList, getUsernameById]);
 
+  // Debounce the data fetching
   useEffect(() => {
-    if (!loading && !error && channelList.length > 0) {
-      fetchLinkCounts();
-      fetchCreatorUsernames();
-    }
+    const handle = setTimeout(() => {
+      if (!loading && !error && memoizedChannelList.length > 0) {
+        fetchLinkCounts();
+        fetchCreatorUsernames();
+      }
+    }, 300); // Adjust the delay as needed
+
+    return () => clearTimeout(handle);
   }, [
     loading,
     error,
-    channelList.length,
+    memoizedChannelList.length,
     fetchLinkCounts,
     fetchCreatorUsernames,
   ]);
 
   useEffect(() => {
-    setFilteredChannels(channelList);
-  }, [channelList]);
+    setFilteredChannels(memoizedChannelList);
+  }, [memoizedChannelList]);
 
   const handleAddChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
