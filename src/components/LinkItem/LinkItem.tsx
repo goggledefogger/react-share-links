@@ -51,7 +51,7 @@ const LinkItem: React.FC<LinkItemProps> = ({
     };
   }, []);
 
-  const handleCardClick = (e: React.MouseEvent) => {
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!(e.target as HTMLElement).closest('.link-actions')) {
       window.open(link.url, '_blank', 'noopener,noreferrer');
     }
@@ -70,10 +70,20 @@ const LinkItem: React.FC<LinkItemProps> = ({
   };
 
   return (
-    <div className="link-card" onClick={handleCardClick} ref={linkCardRef}>
+    <div
+      className="link-card"
+      onClick={handleCardClick}
+      ref={linkCardRef}
+      role="button"
+      tabIndex={0}
+      aria-label={`Link to ${link.url}`}
+      onKeyPress={(e) =>
+        e.key === 'Enter' &&
+        handleCardClick(e as unknown as React.MouseEvent<HTMLDivElement>)
+      }>
       <div className="link-card-header">
         <span className="link-url">
-          <FaLink className="icon" /> {link.url}
+          <FaLink aria-hidden="true" /> {link.url}
         </span>
         <div className="link-actions">
           <div className="emoji-button-container">
@@ -81,8 +91,9 @@ const LinkItem: React.FC<LinkItemProps> = ({
               ref={emojiButtonRef}
               className="btn-icon"
               onClick={handleEmojiButtonClick}
-              title="Add Reaction">
-              <FaSmile />
+              aria-label="Add Reaction"
+              aria-expanded={showEmojiPicker}>
+              <FaSmile aria-hidden="true" />
             </button>
             {showEmojiPicker && (
               <div
@@ -100,8 +111,8 @@ const LinkItem: React.FC<LinkItemProps> = ({
                 e.stopPropagation();
                 onDelete(link.id);
               }}
-              title="Delete Link">
-              <FaTrash />
+              aria-label="Delete Link">
+              <FaTrash aria-hidden="true" />
             </button>
           )}
         </div>
