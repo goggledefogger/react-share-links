@@ -7,41 +7,10 @@ admin.initializeApp();
 const apiKey = process.env.MJ_APIKEY_PUBLIC || functions.config().mailjet?.api_key;
 const apiSecret = process.env.MJ_APIKEY_PRIVATE || functions.config().mailjet?.api_secret;
 
-console.log("Mailjet API key:", apiKey);
-console.log("Mailjet API secret:", apiSecret);
-
 // Initialize Mailjet client with API keys stored in evn vars or Firebase config
 const mailjet = new Client({
   apiKey: apiKey,
   apiSecret: apiSecret,
-});
-
-export const testEmailSend = functions.https.onRequest(async (req, res) => {
-  try {
-    const response = await mailjet.post("send", { version: "v3.1" }).request({
-      Messages: [
-        {
-          To: [
-            {
-              Email: "dannybauman@gmail.com",
-              Name: "Test Recipient",
-            },
-          ],
-          Subject: "Test email from Firebase Function",
-          TextPart:
-            "This is a test email sent from a Firebase Function using Mailjet.",
-          HTMLPart:
-            "<h3>This is a test email sent from a Firebase Function using Mailjet.</h3>",
-        },
-      ],
-    });
-
-    console.log("Email sent successfully:", response.body);
-    res.status(200).send("Test email sent successfully");
-  } catch (error) {
-    console.error("Error sending email:", error);
-    res.status(500).send("Failed to send test email");
-  }
 });
 
 // Helper function to send email
@@ -52,7 +21,6 @@ export async function sendEmail(
   htmlContent: string
 ) {
   const senderEmail = process.env.MJ_SENDER_EMAIL || functions.config().mailjet.sender_email;
-  console.log("Sender email:", senderEmail);
 
   try {
     const response = await mailjet.post("send", { version: "v3.1" }).request({
