@@ -4,15 +4,12 @@
   padding: 2rem;
   background-color: var(--surface-color);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.user-profile h2 {
+.user-profile h2,
+.user-profile h3 {
   color: var(--primary-color);
-  margin-bottom: 1.5rem;
-}
-
-.profile-info {
   margin-bottom: 1.5rem;
 }
 
@@ -20,45 +17,75 @@
   margin-bottom: 0.5rem;
 }
 
-.user-profile .btn {
-  margin-top: 1rem;
+.digest-preferences,
+.subscribed-channels {
+  margin-top: 2rem;
 }
 
-.user-profile.loading,
-.user-profile.error {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-}
-
-.user-profile.error p {
-  color: var(--error-color);
-  text-align: center;
-}
-
-.user-profile form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.user-profile .input {
+.digest-preferences select {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid var(--text-light);
   border-radius: 4px;
-  font-size: 1rem;
   background-color: var(--surface-color);
   color: var(--text-color);
 }
 
-.user-profile .input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(58, 110, 165, 0.2);
+.channel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.user-profile .btn {
-  align-self: flex-start;
+.channel-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: var(--surface-light);
+  border-radius: 4px;
+}
+
+.channel-item input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+.channel-item span {
+  color: var(--text-color);
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  color: white;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+/* Dark mode specific styles */
+.dark .channel-item {
+  background-color: var(--surface-dark);
+}
+
+.dark .channel-item span {
+  color: var(--text-color);
 }

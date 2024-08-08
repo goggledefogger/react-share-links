@@ -2,11 +2,7 @@ import { useState, useEffect } from 'react';
 import { User, signOut, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
-
-interface UserProfile {
-  username: string;
-  email: string;
-}
+import { UserProfile } from '../types';
 
 interface AuthUser {
   user: User | null;
@@ -41,6 +37,8 @@ export function useAuthUser() {
             const defaultProfile: UserProfile = {
               username: user.displayName || user.email?.split('@')[0] || 'User',
               email: user.email || '',
+              digestFrequency: 'none',
+              subscribedChannels: [],
             };
             await setDoc(doc(db, 'users', user.uid), defaultProfile);
             setAuthUser({

@@ -1,0 +1,6 @@
+{
+  "mailjet": {
+    "api_key": "TEST_KEY",
+    "api_secret": "TEST_SECRET"
+  }
+}

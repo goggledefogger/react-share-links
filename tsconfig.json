@@ -15,7 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["jest", "node", "testing-library__jest-dom"]
+    "types": ["jest", "node", "@testing-library/jest-dom"]
   },
-  "include": ["src", "src/setupTests.ts"]
+  "include": ["src"]
 }

@@ -4,6 +4,13 @@ export interface User {
   email: string;
 }
 
+export interface UserProfile {
+  username: string;
+  email: string;
+  digestFrequency: 'daily' | 'weekly' | 'none';
+  subscribedChannels: string[];
+}
+
 export interface Reaction {
   emoji: string;
   userId: string;
