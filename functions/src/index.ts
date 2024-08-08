@@ -9,7 +9,6 @@ const mailjet = new Client({
   apiSecret: functions.config().mailjet.api_secret,
 });
 
-// Export this function for testing
 export async function sendEmail(
   userEmail: string,
   userName: string,

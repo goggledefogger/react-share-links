@@ -8,14 +8,14 @@ import {
 } from 'firebase/auth';
 
 jest.mock('firebase/auth');
-jest.mock('../lib/firebase', () => ({
+jest.mock('../../lib/firebase', () => ({
   auth: {},
   db: {},
 }));
 
 // Mock ToastContext
 const mockShowToast = jest.fn();
-jest.mock('../contexts/ToastContext', () => ({
+jest.mock('../../contexts/ToastContext', () => ({
   ...jest.requireActual('../../contexts/ToastContext'),
   useToast: () => ({ showToast: mockShowToast }),
 }));
@@ -68,7 +68,7 @@ describe('Auth Component', () => {
     fireEvent.change(screen.getByPlaceholderText('Password'), {
       target: { value: 'newpassword123' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Username'), {
+    fireEvent.change(screen.getByPlaceholderText('Username (optional)'), {
       target: { value: 'newuser' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Sign Up' }));

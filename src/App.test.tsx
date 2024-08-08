@@ -10,8 +10,10 @@ jest.mock('react-router-dom', () => ({
 }));
 
 jest.mock('./hooks/useAuthUser');
-jest.mock('./components/ChannelList', () => () => <div>Channel List</div>);
-jest.mock('./components/Auth', () => () => <div>Auth Component</div>);
+jest.mock('./components/ChannelList/ChannelList', () => () => (
+  <div>Channel List</div>
+));
+jest.mock('./components/Auth/Auth', () => () => <div>Auth Component</div>);
 
 describe('App Component', () => {
   test('shows auth component when user is not logged in', () => {

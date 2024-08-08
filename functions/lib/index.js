@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendDailyDigest = exports.sendWeeklyDigest = exports.sendEmail = void 0;
+exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const node_mailjet_1 = require("node-mailjet");
@@ -9,7 +9,6 @@ const mailjet = new node_mailjet_1.Client({
     apiKey: functions.config().mailjet.api_key,
     apiSecret: functions.config().mailjet.api_secret,
 });
-// Export this function for testing
 async function sendEmail(userEmail, userName, subject, htmlContent) {
     try {
         const response = await mailjet.post('send', { version: 'v3.1' }).request({
@@ -38,7 +37,6 @@ async function sendEmail(userEmail, userName, subject, htmlContent) {
         throw new functions.https.HttpsError('internal', 'Failed to send email');
     }
 }
-exports.sendEmail = sendEmail;
 // Reusable function to generate digest content
 async function generateDigestContent(userId, daysAgo) {
     var _a;
