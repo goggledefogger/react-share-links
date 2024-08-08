@@ -10,5 +10,5 @@
     "baseUrl": "."
   },
   "compileOnSave": true,
-  "include": ["src"]
+  "include": ["src", "test"]
 }

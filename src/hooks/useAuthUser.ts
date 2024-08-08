@@ -113,5 +113,39 @@ export function useAuthUser() {
     }
   };
 
-  return { ...authUser, signOutUser, updateUserProfile };
+  const updateUserDigestPreferences = async (
+    digestFrequency: 'daily' | 'weekly' | 'none',
+    subscribedChannels: string[]
+  ) => {
+    if (!authUser.user) {
+      throw new Error('No user logged in');
+    }
+
+    try {
+      const userRef = doc(db, 'users', authUser.user.uid);
+      await updateDoc(userRef, {
+        digestFrequency,
+        subscribedChannels,
+      });
+
+      setAuthUser((prev) => ({
+        ...prev,
+        profile: {
+          ...prev.profile!,
+          digestFrequency,
+          subscribedChannels,
+        } as UserProfile,
+      }));
+    } catch (error) {
+      console.error('Error updating user digest preferences:', error);
+      throw new Error('Failed to update user digest preferences');
+    }
+  };
+
+  return {
+    ...authUser,
+    signOutUser,
+    updateUserProfile,
+    updateUserDigestPreferences,
+  };
 }

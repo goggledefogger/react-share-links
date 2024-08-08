@@ -3,6 +3,7 @@ module.exports = {
   env: {
     es6: true,
     node: true,
+    jest: true,
   },
   extends: [
     'eslint:recommended',
@@ -20,15 +21,15 @@ module.exports = {
   },
   ignorePatterns: [
     '/lib/**/*', // Ignore built files.
-    '.eslintrc.js', // Ignore the ESLint configuration file.
+    '.eslintrc.js', // Ignore the ESLint configuration file itself
   ],
   plugins: ['@typescript-eslint', 'import'],
   rules: {
-    quotes: ['error', 'single'],
+    quotes: ['error', 'double'],
     'import/no-unresolved': 0,
     indent: ['error', 2],
     'object-curly-spacing': ['error', 'always'],
-    'require-jsdoc': 'off',
     'max-len': ['error', { code: 100 }],
+    'require-jsdoc': 0, // Disable require-jsdoc rule
   },
 };
