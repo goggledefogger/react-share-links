@@ -4,26 +4,27 @@ import { Client } from "node-mailjet";
 
 admin.initializeApp();
 
-const apiKey = process.env.MJ_APIKEY_PUBLIC || functions.config().mailjet?.api_key;
-const apiSecret = process.env.MJ_APIKEY_PRIVATE || functions.config().mailjet?.api_secret;
+const apiKey =
+  process.env.MJ_APIKEY_PUBLIC || functions.config().mailjet?.api_key;
+const apiSecret =
+  process.env.MJ_APIKEY_PRIVATE || functions.config().mailjet?.api_secret;
 
-// Initialize Mailjet client with API keys stored in evn vars or Firebase config
 const mailjet = new Client({
   apiKey: apiKey,
   apiSecret: apiSecret,
 });
 
-// Helper function to send email
-export async function sendEmail(
+async function sendEmail(
   userEmail: string,
   userName: string,
   subject: string,
   htmlContent: string
 ) {
-  const senderEmail = process.env.MJ_SENDER_EMAIL || functions.config().mailjet.sender_email;
+  const senderEmail =
+    process.env.MJ_SENDER_EMAIL || functions.config().mailjet.sender_email;
 
   try {
-    const response = await mailjet.post("send", { version: "v3.1" }).request({
+    await mailjet.post("send", { version: "v3.1" }).request({
       Messages: [
         {
           From: {
@@ -42,119 +43,192 @@ export async function sendEmail(
       ],
     });
 
-    console.log("Email sent successfully:", response.body);
+    console.log(`Email sent successfully to ${userEmail}`);
     return { success: true };
   } catch (error) {
-    console.error("Error sending email:", error);
-    throw new functions.https.HttpsError("internal", "Failed to send email");
+    console.error(`Error sending email to ${userEmail}:`, error);
+    throw new functions.https.HttpsError(
+      "internal",
+      `Failed to send email to ${userEmail}`
+    );
   }
 }
 
-// Helper function to generate digest content
 async function generateDigestContent(userId: string, daysAgo: number) {
-  const userDoc = await admin.firestore().collection("users").doc(userId).get();
-  const user = userDoc.data();
-
-  const subscribedChannels = user?.subscribedChannels || [];
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
-
-  let digestContent = "";
-
-  for (const channelId of subscribedChannels) {
-    const linksSnapshot = await admin
+  try {
+    const userDoc = await admin
       .firestore()
-      .collection("links")
-      .where("channelId", "==", channelId)
-      .where("createdAt", ">=", cutoffDate)
-      .orderBy("createdAt", "desc")
-      .limit(5)
+      .collection("users")
+      .doc(userId)
       .get();
-
-    if (!linksSnapshot.empty) {
-      const channelDoc = await admin
-        .firestore()
-        .collection("channels")
-        .doc(channelId)
-        .get();
-      const channelName = channelDoc.data()?.name || "Unknown Channel";
-
-      digestContent += `<h2>${channelName}</h2>`;
-
-      linksSnapshot.forEach((linkDoc) => {
-        const link = linkDoc.data();
-        digestContent += `
-          <div style="margin-bottom: 20px;">
-            <h3><a href="${link.url}">${
-  link.preview?.title || link.url
-}</a></h3>
-            ${
-  link.preview?.image ?
-    `<img src="${link.preview.image}" alt="Preview" style="max-width: 200px;">` :
-    ""
-}
-            <p>${link.preview?.description || ""}</p>
-          </div>
-        `;
-      });
-    }
-  }
-
-  return digestContent;
-}
-
-// Function to send digest emails based on frequency
-async function sendDigest(frequency: string, daysAgo: number) {
-  const usersSnapshot = await admin
-    .firestore()
-    .collection("users")
-    .where("digestFrequency", "==", frequency)
-    .get();
-
-  for (const userDoc of usersSnapshot.docs) {
-    const userId = userDoc.id;
     const user = userDoc.data();
 
-    const digestContent = await generateDigestContent(userId, daysAgo);
-
-    if (digestContent) {
-      const htmlContent = `
-        <html>
-          <body>
-            <h1>Your ${
-  frequency === "weekly" ? "Weekly" : "Daily"
-} Digest from Share Links</h1>
-            ${digestContent}
-          </body>
-        </html>
-      `;
-
-      await sendEmail(
-        user?.email || "",
-        user?.username || "User",
-        `Your ${
-          frequency === "weekly" ? "Weekly" : "Daily"
-        } Share Links Digest`,
-        htmlContent
-      );
+    if (!user) {
+      console.error(`User data not found for userId: ${userId}`);
+      return "";
     }
-  }
 
-  return null;
+    const subscribedChannels = user.subscribedChannels || [];
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
+
+    let digestContent = "";
+
+    for (const channelId of subscribedChannels) {
+      try {
+        const linksSnapshot = await admin
+          .firestore()
+          .collection("links")
+          .where("channelId", "==", channelId)
+          .where("createdAt", ">=", cutoffDate)
+          .orderBy("createdAt", "desc")
+          .limit(5)
+          .get();
+
+        if (!linksSnapshot.empty) {
+          const channelDoc = await admin
+            .firestore()
+            .collection("channels")
+            .doc(channelId)
+            .get();
+          const channelName = channelDoc.data()?.name || "Unknown Channel";
+
+          digestContent += `
+            <h2 style="color: #5b8cb7; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+              ${channelName}
+            </h2>
+          `;
+
+          linksSnapshot.forEach((linkDoc) => {
+            const link = linkDoc.data();
+            const title = link.preview?.title || link.url;
+            const image = link.preview?.image ?
+              `<img src="${link.preview.image}" alt="Preview"
+                  style="max-width: 100%; height: auto; margin-bottom: 10px;">` :
+              "";
+            const description = link.preview?.description || "";
+
+            digestContent += `
+              <div style="margin-bottom: 20px; background-color: #f9f9f9;
+                  padding: 15px; border-radius: 5px;">
+                <h3 style="margin-top: 0;">
+                  <a href="${link.url}" style="color: #3a6ea5; text-decoration: none;">
+                    ${title}
+                  </a>
+                </h3>
+                ${image}
+                <p style="color: #666; margin-bottom: 0;">${description}</p>
+              </div>
+            `;
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing channel ${channelId}:`, error);
+      }
+    }
+
+    return digestContent;
+  } catch (error) {
+    console.error(
+      `Error generating digest content for userId ${userId}:`,
+      error
+    );
+    return "";
+  }
 }
 
-// Scheduled function for weekly digest
+async function sendDigest(frequency: string, daysAgo: number) {
+  try {
+    const usersSnapshot = await admin
+      .firestore()
+      .collection("users")
+      .where("digestFrequency", "==", frequency)
+      .get();
+
+    console.log(`Sending ${frequency} digest to ${usersSnapshot.size} users`);
+
+    for (const userDoc of usersSnapshot.docs) {
+      const userId = userDoc.id;
+      const user = userDoc.data();
+
+      try {
+        const digestContent = await generateDigestContent(userId, daysAgo);
+
+        if (digestContent) {
+          const htmlContent = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>${
+  frequency === "weekly" ? "Weekly" : "Daily"
+} Share Links Digest</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;
+                max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h1 style="color: #5b8cb7;">
+                Your ${
+  frequency === "weekly" ? "Weekly" : "Daily"
+} Share Links Digest
+              </h1>
+              ${digestContent}
+              <p style="margin-top: 30px; font-size: 0.9em; color: #888;">
+                You're receiving this email because you've subscribed to
+                ${
+  frequency === "weekly" ? "weekly" : "daily"
+} digests from Share Links.
+                <a href="#" style="color: #5b8cb7;">Manage your preferences</a>
+              </p>
+            </body>
+            </html>
+          `;
+
+          await sendEmail(
+            user.email,
+            user.username || "User",
+            `Your ${
+              frequency === "weekly" ? "Weekly" : "Daily"
+            } Share Links Digest`,
+            htmlContent
+          );
+          console.log(`Digest sent successfully to user ${userId}`);
+        } else {
+          console.log(`No digest content for user ${userId}`);
+        }
+      } catch (error) {
+        console.error(`Error processing digest for user ${userId}:`, error);
+      }
+    }
+
+    console.log(`Finished sending ${frequency} digests`);
+    return null;
+  } catch (error) {
+    console.error(
+      `Error in sendDigest function for ${frequency} digest:`,
+      error
+    );
+    throw new functions.https.HttpsError(
+      "internal",
+      `Failed to send ${frequency} digests`
+    );
+  }
+}
+
 export const sendWeeklyDigest = functions.pubsub
   .schedule("every monday 09:00")
   .timeZone("America/New_York")
   .onRun(async () => {
+    console.log("Starting weekly digest");
     return sendDigest("weekly", 7);
   });
 
-// Scheduled function for daily digest
 export const sendDailyDigest = functions.pubsub
   .schedule("every day 09:00")
   .timeZone("America/New_York")
   .onRun(async () => {
+    console.log("Starting daily digest");
     return sendDigest("daily", 1);
   });
+
+export { sendEmail };

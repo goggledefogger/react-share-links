@@ -3,7 +3,6 @@ module.exports = {
   env: {
     es6: true,
     node: true,
-    jest: true,
   },
   extends: [
     'eslint:recommended',
@@ -21,6 +20,7 @@ module.exports = {
   },
   ignorePatterns: [
     '/lib/**/*', // Ignore built files.
+    'jest.config.js', // Ignore jest configuration
     '.eslintrc.js', // Ignore the ESLint configuration file itself
   ],
   plugins: ['@typescript-eslint', 'import'],

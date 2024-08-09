@@ -109,12 +109,21 @@ const UserProfile: React.FC = () => {
         />
       ) : (
         <div className="profile-info">
-          <p>
-            <strong>Username:</strong> {localProfile.username}
-          </p>
-          <p>
-            <strong>Email:</strong> {localProfile.email}
-          </p>
+          <div>
+            <p>
+              <strong>Username:</strong> {localProfile.username}
+            </p>
+            <p>
+              <strong>Email:</strong> {localProfile.email}
+            </p>
+          </div>
+          <div className="button-group">
+            <button
+              onClick={() => setIsEditing((prev) => !prev)}
+              className="btn btn-secondary">
+              {isEditing ? 'Cancel' : 'Edit Profile'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -148,11 +157,6 @@ const UserProfile: React.FC = () => {
       </div>
 
       <div className="button-group">
-        <button
-          onClick={() => setIsEditing((prev) => !prev)}
-          className="btn btn-secondary">
-          {isEditing ? 'Cancel' : 'Edit Profile'}
-        </button>
         {!isEditing && (
           <button onClick={handleSubmit} className="btn btn-primary">
             Save Changes
