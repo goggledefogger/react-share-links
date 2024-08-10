@@ -37,6 +37,18 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+.channel-item.subscribed {
+  background-color: rgba(91, 140, 183, 0.1);
+  /* Light blue background */
+  border-left: 4px solid var(--primary-color);
+}
+
+.channel-item.subscribed:hover {
+  background-color: rgba(91, 140, 183, 0.2);
+  /* Slightly darker on hover */
+}
+
+
 .channel-info {
   display: flex;
   flex-direction: column;

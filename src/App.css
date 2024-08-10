@@ -100,9 +100,17 @@ h6 {
 }
 
 .welcome-message {
-  display: none;
   color: var(--text-color);
   font-size: 0.9rem;
+  text-decoration: none;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.welcome-message:hover {
+  background-color: var(--surface-light);
+  color: var(--primary-color);
 }
 
 /* Main Content Styles */

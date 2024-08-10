@@ -71,7 +71,7 @@ const LinkItem: React.FC<LinkItemProps> = ({
 
   return (
     <div
-      className="link-card"
+      className={`link-card ${link.userId === user?.uid ? 'user-posted' : ''}`}
       onClick={handleCardClick}
       ref={linkCardRef}
       role="button"

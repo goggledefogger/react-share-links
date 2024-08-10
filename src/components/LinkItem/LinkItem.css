@@ -189,6 +189,17 @@
     padding: 12px;
   }
 
+  .link-card.user-posted {
+    background-color: rgba(128, 168, 155, 0.1);
+    /* Light green background */
+    border-left: 4px solid var(--secondary-color);
+  }
+
+  .link-card.user-posted:hover {
+    background-color: rgba(128, 168, 155, 0.2);
+    /* Slightly darker on hover */
+  }
+
   .link-card-content {
     flex-direction: column;
     align-items: flex-start;

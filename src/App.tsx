@@ -15,7 +15,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import Toast from './components/Toast/Toast';
 import LoadingSpinner from './components/common/LoadingSpinner';
-import { FaUser, FaMoon, FaSun } from 'react-icons/fa';
+import { FaMoon, FaSun } from 'react-icons/fa';
 import './styles/variables.css';
 import './styles/animations.css';
 import './App.css';
@@ -46,22 +46,17 @@ const AppContent: React.FC = () => {
           </Link>
           <nav className="main-nav">
             {user && (
-              <>
-                <Link to="/" className="nav-link">
-                  Channels
-                </Link>
-                <Link to="/profile" className="nav-link">
-                  Profile
-                </Link>
-              </>
+              <Link to="/" className="nav-link">
+                Channels
+              </Link>
             )}
           </nav>
           <div className="user-actions">
             {user ? (
               <>
-                <span className="welcome-message">
+                <Link to="/profile" className="welcome-message">
                   Welcome, {profile?.username || user.email}
-                </span>
+                </Link>
                 <button onClick={signOutUser} className="btn btn-primary">
                   Sign Out
                 </button>
