@@ -2,222 +2,64 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   collection,
   query,
-  where,
   orderBy,
-  limit,
-  startAfter,
   getDocs,
-  getDoc,
   addDoc,
   deleteDoc,
-  doc,
   updateDoc,
-  arrayUnion,
-  arrayRemove,
-  onSnapshot,
+  doc,
+  getDoc,
+  where,
   getCountFromServer,
   QueryDocumentSnapshot,
+  limit as firestoreLimit,
+  startAfter,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { Channel, Link, User } from '../types';
-import { logFirestoreOperation } from '../utils/firestoreLogger';
+import { Channel, Link } from '../types';
 
-function useChannels() {
+export function useChannels() {
   const [channelList, setChannelList] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const channelsCollection = collection(db, 'channels');
-    logFirestoreOperation('read', 'Listening to channels collection');
-
-    // Track the unsubscribe function to clean up on unmount
-    const unsubscribe = onSnapshot(
-      query(channelsCollection, orderBy('createdAt', 'desc')),
-      (snapshot) => {
-        const updatedChannels = snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() } as Channel)
-        );
-
-        setChannelList((prevChannels) => {
-          if (
-            JSON.stringify(prevChannels) !== JSON.stringify(updatedChannels)
-          ) {
-            return updatedChannels;
-          }
-          return prevChannels;
-        });
-
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching channels:', err);
-        setError('Failed to fetch channels');
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+  const fetchChannels = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const channelsCollection = collection(db, 'channels');
+      const q = query(channelsCollection, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const updatedChannels = snapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as Channel)
+      );
+      setChannelList(updatedChannels);
+    } catch (err) {
+      console.error('Error fetching channels:', err);
+      setError('Failed to fetch channels');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const getAllChannelLinkCounts = useCallback(async (): Promise<{
-    [key: string]: number;
-  }> => {
-    const counts: { [key: string]: number } = {};
+  useEffect(() => {
+    fetchChannels();
+  }, [fetchChannels]);
 
-    for (const channel of channelList) {
-      const linksCollection = collection(db, 'links');
-      const q = query(linksCollection, where('channelId', '==', channel.id));
-      logFirestoreOperation(
-        'read',
-        `Getting link count for channel ${channel.id}`
-      );
-      const snapshot = await getCountFromServer(q);
-      counts[channel.id] = snapshot.data().count;
-    }
-
-    return counts;
-  }, [channelList]);
-
-  const addLink = async (channelId: string, url: string) => {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User must be logged in to add a link');
-
+  const getChannel = async (channelId: string): Promise<Channel | null> => {
     try {
-      const newLink: Omit<Link, 'id'> = {
-        channelId,
-        userId: user.uid,
-        url,
-        createdAt: Date.now(),
-        preview: null,
-        reactions: [],
-      };
-
-      logFirestoreOperation('write', `Adding new link to channel ${channelId}`);
-      const docRef = await addDoc(collection(db, 'links'), newLink);
-      const linkWithId: Link = { id: docRef.id, ...newLink };
-
-      // Fetch link preview asynchronously
-      fetchLinkPreview(url).then(async (preview) => {
-        if (preview) {
-          logFirestoreOperation(
-            'write',
-            `Updating link ${docRef.id} with preview`
-          );
-          await updateDoc(docRef, { preview });
-          return { ...linkWithId, preview };
-        }
-        return linkWithId;
-      });
-
-      return linkWithId;
-    } catch (e) {
-      console.error('Error adding link: ', e);
-      throw e;
-    }
-  };
-
-  async function fetchLinkPreview(url: string) {
-    const LINK_PREVIEW_API_KEY = process.env.REACT_APP_LINKPREVIEW_API_KEY;
-    if (!LINK_PREVIEW_API_KEY) {
-      console.error('LinkPreview API key is not set');
-      return null;
-    }
-
-    try {
-      const response = await fetch(
-        `https://api.linkpreview.net/?key=${LINK_PREVIEW_API_KEY}&q=${encodeURIComponent(
-          url
-        )}`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch link preview');
+      const channelDoc = await getDoc(doc(db, 'channels', channelId));
+      if (channelDoc.exists()) {
+        return { id: channelDoc.id, ...channelDoc.data() } as Channel;
       }
-      const data = await response.json();
-      return {
-        title: data.title || '',
-        description: data.description || '',
-        image: data.image || '',
-        favicon: data.favicon || '',
-      };
+      return null;
     } catch (error) {
-      console.error('Error fetching link preview:', error);
-      return null;
+      console.error('Error fetching channel:', error);
+      throw error;
     }
-  }
-
-  function validateAndFormatUrl(url: string): string | null {
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-
-    try {
-      new URL(url);
-      return url;
-    } catch {
-      return null;
-    }
-  }
-
-  const getUsernameById = async (userId: string): Promise<string> => {
-    const userDoc = await getDoc(doc(db, 'users', userId));
-    if (userDoc.exists()) {
-      return userDoc.data().username || 'Unknown User';
-    }
-    return 'Unknown User';
   };
-
-  async function addChannel(channelName: string, description?: string) {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User must be logged in to create a channel');
-
-    try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data() as User | undefined;
-
-      const newChannel: Omit<Channel, 'id'> = {
-        name: channelName.trim(),
-        createdBy: user.uid,
-        creatorUsername:
-          userData?.username || user.email?.split('@')[0] || 'Anonymous',
-        createdAt: Date.now(),
-      };
-
-      if (description && description.trim() !== '') {
-        newChannel.description = description.trim();
-      }
-
-      const docRef = await addDoc(collection(db, 'channels'), newChannel);
-      const createdChannel: Channel = { id: docRef.id, ...newChannel };
-
-      return createdChannel;
-    } catch (e) {
-      console.error('Error adding channel: ', e);
-      throw e;
-    }
-  }
-
-  async function deleteChannel(channelId: string) {
-    try {
-      await deleteDoc(doc(db, 'channels', channelId));
-      // We don't need to update the state here, as the onSnapshot listener will do it for us
-    } catch (e) {
-      console.error('Error removing channel: ', e);
-      throw e;
-    }
-  }
-
-  async function getChannel(channelId: string) {
-    const docRef = doc(db, 'channels', channelId);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as Channel;
-    } else {
-      console.log('No such channel!');
-      return null;
-    }
-  }
 
   const getChannelLinks = async (
     channelId: string,
@@ -233,7 +75,7 @@ function useChannels() {
         linksCollection,
         where('channelId', '==', channelId),
         orderBy('createdAt', 'desc'),
-        limit(limitCount)
+        firestoreLimit(limitCount)
       );
 
       if (lastVisible) {
@@ -241,12 +83,12 @@ function useChannels() {
       }
 
       const querySnapshot = await getDocs(q);
-      const links = await Promise.all(
-        querySnapshot.docs.map(async (doc) => {
-          const linkData = doc.data() as Omit<Link, 'id'>;
-          const username = await getUsernameById(linkData.userId);
-          return { id: doc.id, ...linkData, username };
-        })
+      const links = querySnapshot.docs.map(
+        (doc) =>
+          ({
+            id: doc.id,
+            ...doc.data(),
+          } as Link)
       );
 
       const lastVisibleDoc = querySnapshot.docs[
@@ -259,106 +101,152 @@ function useChannels() {
       };
     } catch (error) {
       console.error('Error fetching channel links:', error);
-      throw new Error('Failed to fetch channel links');
+      throw error;
     }
   };
 
-  function isValidEmoji(emoji: string): boolean {
-    // Basic emoji validation (you might want to use a library for more comprehensive validation)
-    const emojiRegex = /^(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)$/u;
-    return emojiRegex.test(emoji) && emoji.length === 1;
-  }
-
-  async function deleteLink(linkId: string) {
+  const addChannel = async (channelName: string) => {
     const user = auth.currentUser;
-    if (!user) throw new Error('User must be logged in to delete a link');
+    if (!user) throw new Error('User must be logged in to create a channel');
 
     try {
-      const linkRef = doc(db, 'links', linkId);
-      const linkDoc = await getDoc(linkRef);
+      const newChannel = {
+        name: channelName.trim(),
+        createdBy: user.uid,
+        createdAt: Date.now(),
+      };
+      const docRef = await addDoc(collection(db, 'channels'), newChannel);
+      await fetchChannels(); // Refresh the channel list
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding channel:', error);
+      throw error;
+    }
+  };
 
-      if (!linkDoc.exists()) {
-        throw new Error('Link not found');
-      }
+  const deleteChannel = async (channelId: string) => {
+    try {
+      await deleteDoc(doc(db, 'channels', channelId));
+      await fetchChannels(); // Refresh the channel list
+    } catch (error) {
+      console.error('Error deleting channel:', error);
+      throw error;
+    }
+  };
 
-      const linkData = linkDoc.data();
-      if (linkData.userId !== user.uid) {
-        throw new Error('You do not have permission to delete this link');
-      }
+  const updateChannel = async (channelId: string, newName: string) => {
+    try {
+      await updateDoc(doc(db, 'channels', channelId), { name: newName.trim() });
+      await fetchChannels(); // Refresh the channel list
+    } catch (error) {
+      console.error('Error updating channel:', error);
+      throw error;
+    }
+  };
 
-      await deleteDoc(linkRef);
-      return true;
+  const addLink = async (channelId: string, url: string): Promise<Link> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error('User must be logged in to add a link');
+
+    try {
+      const newLink: Omit<Link, 'id'> = {
+        channelId,
+        userId: user.uid,
+        url,
+        createdAt: Date.now(),
+        reactions: [],
+        preview: null, // Add a default value for preview
+      };
+      const docRef = await addDoc(collection(db, 'links'), newLink);
+      return { id: docRef.id, ...newLink };
+    } catch (error) {
+      console.error('Error adding link:', error);
+      throw error;
+    }
+  };
+
+  const deleteLink = async (linkId: string) => {
+    try {
+      await deleteDoc(doc(db, 'links', linkId));
     } catch (error) {
       console.error('Error deleting link:', error);
       throw error;
     }
-  }
+  };
 
-  async function addEmojiReaction(
+  const addEmojiReaction = async (
     linkId: string,
     emoji: string,
     userId: string | undefined
-  ) {
+  ) => {
     if (!userId) throw new Error('User must be logged in to add a reaction');
-
     try {
       const linkRef = doc(db, 'links', linkId);
       await updateDoc(linkRef, {
         reactions: arrayUnion({ emoji, userId }),
       });
-      return true;
-    } catch (e) {
-      console.error('Error adding emoji reaction: ', e);
-      throw e;
+    } catch (error) {
+      console.error('Error adding emoji reaction:', error);
+      throw error;
     }
-  }
+  };
 
-  async function removeEmojiReaction(
+  const removeEmojiReaction = async (
     linkId: string,
     emoji: string,
     userId: string | undefined
-  ) {
+  ) => {
     if (!userId) throw new Error('User must be logged in to remove a reaction');
-
     try {
       const linkRef = doc(db, 'links', linkId);
       await updateDoc(linkRef, {
         reactions: arrayRemove({ emoji, userId }),
       });
-      return true;
-    } catch (e) {
-      console.error('Error removing emoji reaction: ', e);
-      throw e;
-    }
-  }
-
-  async function updateChannel(channelId: string, newName: string) {
-    try {
-      const channelRef = doc(db, 'channels', channelId);
-      await updateDoc(channelRef, { name: newName.trim() });
-      // We don't need to update the state here, as the onSnapshot listener will do it for us
     } catch (error) {
-      console.error('Error updating channel:', error);
+      console.error('Error removing emoji reaction:', error);
       throw error;
     }
-  }
+  };
+
+  const getAllChannelLinkCounts = async () => {
+    const counts: { [key: string]: number } = {};
+    for (const channel of channelList) {
+      const linksCollection = collection(db, 'links');
+      const q = query(linksCollection, where('channelId', '==', channel.id));
+      const snapshot = await getCountFromServer(q);
+      counts[channel.id] = snapshot.data().count;
+    }
+    return counts;
+  };
+
+  const getUsernameById = async (userId: string) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        return userDoc.data().username || 'Unknown User';
+      }
+      return 'Unknown User';
+    } catch (error) {
+      console.error('Error fetching username:', error);
+      return 'Unknown User';
+    }
+  };
 
   return {
     channelList,
     loading,
     error,
-    addChannel,
-    deleteChannel,
+    fetchChannels,
     getChannel,
     getChannelLinks,
-    getAllChannelLinkCounts,
+    addChannel,
+    deleteChannel,
+    updateChannel,
     addLink,
     deleteLink,
     addEmojiReaction,
     removeEmojiReaction,
-    updateChannel,
+    getAllChannelLinkCounts,
     getUsernameById,
   };
 }
-
-export { useChannels };

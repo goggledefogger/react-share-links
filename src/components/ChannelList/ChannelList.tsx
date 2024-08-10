@@ -6,6 +6,7 @@ import { Channel } from '../../types';
 import Form from '../common/Form';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useToast } from '../../contexts/ToastContext';
+import LoadingSpinner from '../common/LoadingSpinner';
 import {
   FaUser,
   FaClock,
@@ -23,13 +24,14 @@ const ChannelList: React.FC = () => {
     channelList,
     loading,
     error,
+    fetchChannels,
     addChannel,
     deleteChannel,
     updateChannel,
     getAllChannelLinkCounts,
     getUsernameById,
   } = useChannels();
-  const { user } = useAuthUser();
+  const { user, profile, loading: authLoading } = useAuthUser();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
@@ -40,7 +42,6 @@ const ChannelList: React.FC = () => {
   });
   const [linkCounts, setLinkCounts] = useState<{ [key: string]: number }>({});
   const { showToast } = useToast();
-  const [filteredChannels, setFilteredChannels] = useState<Channel[]>([]);
   const [creatorUsernames, setCreatorUsernames] = useState<{
     [key: string]: string;
   }>({});
@@ -48,52 +49,57 @@ const ChannelList: React.FC = () => {
   // Memoize channels to avoid recalculations
   const memoizedChannelList = useMemo(() => channelList, [channelList]);
 
-  const fetchLinkCounts = useCallback(async () => {
-    const counts = await getAllChannelLinkCounts();
-    setLinkCounts((prevCounts) => {
-      // Only update if the counts have changed
-      if (JSON.stringify(prevCounts) !== JSON.stringify(counts)) {
-        return counts;
+  // Sort channels: subscribed channels first, then alphabetically
+  const sortedChannels = useMemo(() => {
+    return [...memoizedChannelList].sort((a, b) => {
+      const aSubscribed = profile?.subscribedChannels?.includes(a.id) || false;
+      const bSubscribed = profile?.subscribedChannels?.includes(b.id) || false;
+
+      if (aSubscribed === bSubscribed) {
+        return a.name.localeCompare(b.name);
       }
-      return prevCounts;
+      return aSubscribed ? -1 : 1;
     });
-  }, [getAllChannelLinkCounts]);
+  }, [memoizedChannelList, profile?.subscribedChannels]);
+
+  const fetchLinkCounts = useCallback(async () => {
+    try {
+      const counts = await getAllChannelLinkCounts();
+      setLinkCounts(counts);
+    } catch (error) {
+      console.error('Error fetching link counts:', error);
+      showToast({ message: 'Failed to fetch link counts', type: 'error' });
+    }
+  }, [getAllChannelLinkCounts, showToast]);
 
   const fetchCreatorUsernames = useCallback(async () => {
-    const usernames: { [key: string]: string } = {};
-    for (const channel of memoizedChannelList) {
-      usernames[channel.id] = await getUsernameById(channel.createdBy);
+    try {
+      const usernames: { [key: string]: string } = {};
+      for (const channel of memoizedChannelList) {
+        usernames[channel.id] = await getUsernameById(channel.createdBy);
+      }
+      setCreatorUsernames(usernames);
+    } catch (error) {
+      console.error('Error fetching creator usernames:', error);
+      showToast({
+        message: 'Failed to fetch creator usernames',
+        type: 'error',
+      });
     }
-    setCreatorUsernames((prevUsernames) => {
-      // Only update if the usernames have changed
-      if (JSON.stringify(prevUsernames) !== JSON.stringify(usernames)) {
-        return usernames;
-      }
-      return prevUsernames;
-    });
-  }, [memoizedChannelList, getUsernameById]);
+  }, [memoizedChannelList, getUsernameById, showToast]);
 
-  // Debounce the data fetching
   useEffect(() => {
-    const handle = setTimeout(() => {
-      if (!loading && !error && memoizedChannelList.length > 0) {
-        fetchLinkCounts();
-        fetchCreatorUsernames();
-      }
-    }, 300); // Adjust the delay as needed
-
-    return () => clearTimeout(handle);
+    if (!loading && !error && memoizedChannelList.length > 0) {
+      fetchLinkCounts();
+      fetchCreatorUsernames();
+    }
   }, [
     loading,
     error,
-    memoizedChannelList.length,
+    memoizedChannelList,
     fetchLinkCounts,
     fetchCreatorUsernames,
   ]);
-
-  useEffect(() => {
-    setFilteredChannels(memoizedChannelList);
-  }, [memoizedChannelList]);
 
   const handleAddChannel = async (formData: { [key: string]: string }) => {
     const { channelName } = formData;
@@ -186,20 +192,48 @@ const ChannelList: React.FC = () => {
     navigate(`/channel/${channelId}`);
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
+  if (authLoading || loading) {
+    return (
+      <div className="loading-container">
+        <LoadingSpinner size="large" />
+      </div>
+    );
   }
 
   if (error) {
-    return <div>Error loading channels: {error}</div>;
+    return (
+      <div className="error-container">
+        <p>Error loading channels: {error}</p>
+        <button onClick={fetchChannels} className="btn btn-primary">
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="error-container">
+        <p>Please log in to view channels.</p>
+        <button onClick={() => navigate('/login')} className="btn btn-primary">
+          Log In
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="channel-list">
       <h2>Channels</h2>
       <ul className="channel-items">
-        {filteredChannels.map((channel: Channel) => (
-          <li key={channel.id} className="channel-item">
+        {sortedChannels.map((channel: Channel) => (
+          <li
+            key={channel.id}
+            className={`channel-item ${
+              profile?.subscribedChannels?.includes(channel.id)
+                ? 'subscribed'
+                : ''
+            }`}>
             {editingChannelId === channel.id ? (
               <Form
                 fields={[
