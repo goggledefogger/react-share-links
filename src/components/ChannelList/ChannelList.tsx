@@ -264,11 +264,17 @@ const ChannelList: React.FC = () => {
                     </span>
                   </div>
                   <div className="channel-meta">
-                    <span className="channel-creator">
+                    <span
+                      className={`channel-creator ${
+                        channel.createdBy === user?.uid ? 'current-user' : ''
+                      }`}>
                       <FaUser className="icon" />{' '}
                       {creatorUsernames[channel.id] || 'Loading...'}
                     </span>
-                    <span className="channel-date">
+                    <span
+                      className={`channel-date ${
+                        channel.createdBy === user?.uid ? 'current-user' : ''
+                      }`}>
                       <FaClock className="icon" />{' '}
                       {formatRelativeTime(channel.createdAt)}
                     </span>

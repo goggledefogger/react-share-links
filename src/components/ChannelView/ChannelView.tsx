@@ -23,6 +23,7 @@ const ChannelView: React.FC = () => {
     deleteLink,
     addEmojiReaction,
     removeEmojiReaction,
+    getUsernameById,
   } = useChannels();
   const { showToast } = useToast();
   const { user } = useAuthUser();
@@ -46,23 +47,41 @@ const ChannelView: React.FC = () => {
         setChannel(fetchedChannel);
         const { links: fetchedLinks, lastVisible: lastVisibleDoc } =
           await getChannelLinks(id);
-        setLinks(fetchedLinks);
+
+        // Fetch usernames for all links
+        const linksWithUsernames = await Promise.all(
+          fetchedLinks.map(async (link) => {
+            const username = await getUsernameById(link.userId);
+            return { ...link, username };
+          })
+        );
+
+        setLinks(linksWithUsernames);
         setLastVisible(lastVisibleDoc);
         setHasMore(fetchedLinks.length === LINKS_PER_PAGE);
       }
     };
 
     fetchChannelAndLinks();
-  }, [id, getChannel, getChannelLinks]);
+  }, [id, getChannel, getChannelLinks, getUsernameById]);
 
   const fetchLinks = async () => {
     if (id) {
       setIsLoadingMore(true);
       try {
         const result = await getChannelLinks(id, LINKS_PER_PAGE, lastVisible);
+
+        // Fetch usernames for new links
+        const newLinksWithUsernames = await Promise.all(
+          result.links.map(async (link) => {
+            const username = await getUsernameById(link.userId);
+            return { ...link, username };
+          })
+        );
+
         setLinks((prevLinks) => {
           const existingIds = new Set(prevLinks.map((link) => link.id));
-          const newUniqueLinks = result.links.filter(
+          const newUniqueLinks = newLinksWithUsernames.filter(
             (link) => !existingIds.has(link.id)
           );
           return [...prevLinks, ...newUniqueLinks];

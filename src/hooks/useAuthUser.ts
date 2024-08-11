@@ -103,6 +103,7 @@ export function useAuthUser() {
         });
       }
 
+      // Update local state
       setAuthUser((prev) => ({
         ...prev,
         profile: { ...prev.profile, ...newProfile } as UserProfile,
@@ -128,6 +129,7 @@ export function useAuthUser() {
         subscribedChannels,
       });
 
+      // Update local state
       setAuthUser((prev) => ({
         ...prev,
         profile: {

@@ -20,10 +20,14 @@ import {
 import { db, auth } from '../lib/firebase';
 import { Channel, Link } from '../types';
 
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY = 2000; // 2 seconds
+
 export function useChannels() {
   const [channelList, setChannelList] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const fetchChannels = useCallback(async () => {
     setLoading(true);
@@ -36,13 +40,20 @@ export function useChannels() {
         (doc) => ({ id: doc.id, ...doc.data() } as Channel)
       );
       setChannelList(updatedChannels);
+      setRetryCount(0); // Reset retry count on successful fetch
     } catch (err) {
       console.error('Error fetching channels:', err);
       setError('Failed to fetch channels');
+
+      // Implement retry logic
+      if (retryCount < MAX_RETRY_ATTEMPTS) {
+        setRetryCount((prevCount) => prevCount + 1);
+        setTimeout(() => fetchChannels(), RETRY_DELAY);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [retryCount]);
 
   useEffect(() => {
     fetchChannels();

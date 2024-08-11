@@ -28,15 +28,10 @@ const UserProfile: React.FC = () => {
     }
   }, [profile]);
 
-  const handleSubmit = async () => {
-    if (!localProfile) return;
-
+  const handleSubmit = async (updatedProfile: UserProfileType) => {
     try {
-      await updateUserProfile({
-        ...localProfile,
-        digestFrequency,
-        subscribedChannels,
-      });
+      await updateUserProfile(updatedProfile);
+      setLocalProfile(updatedProfile);
       setIsEditing(false);
       showToast({ message: 'Profile updated successfully', type: 'success' });
     } catch (error) {
@@ -46,8 +41,13 @@ const UserProfile: React.FC = () => {
 
   const handleFormSubmit = (formData: { [key: string]: string }) => {
     if (!localProfile) return;
-    setLocalProfile({ ...localProfile, ...formData });
-    handleSubmit();
+    const updatedProfile = {
+      ...localProfile,
+      ...formData,
+      digestFrequency,
+      subscribedChannels,
+    };
+    handleSubmit(updatedProfile);
   };
 
   const handleChannelToggle = (channelId: string) => {
@@ -109,21 +109,17 @@ const UserProfile: React.FC = () => {
         />
       ) : (
         <div className="profile-info">
-          <div>
-            <p>
-              <strong>Username:</strong> {localProfile.username}
-            </p>
-            <p>
-              <strong>Email:</strong> {localProfile.email}
-            </p>
-          </div>
-          <div className="button-group">
-            <button
-              onClick={() => setIsEditing((prev) => !prev)}
-              className="btn btn-secondary">
-              {isEditing ? 'Cancel' : 'Edit Profile'}
-            </button>
-          </div>
+          <p>
+            <strong>Username:</strong> {localProfile.username}
+          </p>
+          <p>
+            <strong>Email:</strong> {localProfile.email}
+          </p>
+          <button
+            onClick={() => setIsEditing(true)}
+            className="btn btn-secondary">
+            Edit Profile
+          </button>
         </div>
       )}
 
@@ -158,7 +154,15 @@ const UserProfile: React.FC = () => {
 
       <div className="button-group">
         {!isEditing && (
-          <button onClick={handleSubmit} className="btn btn-primary">
+          <button
+            onClick={() =>
+              handleSubmit({
+                ...localProfile,
+                digestFrequency,
+                subscribedChannels,
+              })
+            }
+            className="btn btn-primary">
             Save Changes
           </button>
         )}

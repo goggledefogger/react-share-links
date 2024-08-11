@@ -25,7 +25,7 @@
   padding: 1rem;
   background-color: var(--surface-color);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid var(--primary-color);
+  border-left: 6px solid var(--secondary-color);
   margin-bottom: 1rem;
   border-radius: 4px;
   transition: all 0.3s ease;
@@ -37,17 +37,18 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+.channel-item.user-created {
+  border-left-color: var(--primary-color);
+}
+
 .channel-item.subscribed {
   background-color: rgba(91, 140, 183, 0.1);
-  /* Light blue background */
-  border-left: 4px solid var(--primary-color);
+  border-left-color: var(--primary-color);
 }
 
 .channel-item.subscribed:hover {
   background-color: rgba(91, 140, 183, 0.2);
-  /* Slightly darker on hover */
 }
-
 
 .channel-info {
   display: flex;
@@ -83,6 +84,17 @@
   display: flex;
   align-items: center;
   margin-right: 15px;
+}
+
+.channel-creator.current-user,
+.channel-date.current-user {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.dark .channel-creator.current-user,
+.dark .channel-date.current-user {
+  color: var(--primary-light);
 }
 
 .icon {
@@ -132,6 +144,19 @@
 
 .add-channel-form .btn {
   flex-shrink: 0;
+}
+
+/* Dark theme adjustments */
+.dark .channel-item {
+  border-left-color: var(--dark-secondary-color, #80a89b);
+}
+
+.dark .channel-item.user-created {
+  border-left-color: var(--dark-primary-color, #3a6ea5);
+}
+
+.dark .channel-item.subscribed {
+  border-left-color: var(--dark-primary-color, #3a6ea5);
 }
 
 @media (max-width: 768px) {
