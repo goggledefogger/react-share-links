@@ -28,8 +28,9 @@ jest.mock('firebase/firestore', () => ({
   getDoc: jest.fn(() => Promise.resolve({ exists: () => false })),
 }));
 
-// Provide a global TextDecoder
+// Provide a global TextDecoder and TextEncoder
 global.TextDecoder = require('util').TextDecoder;
+global.TextEncoder = require('util').TextEncoder;
 
 // Suppress console.log and console.error in tests
 global.console = {

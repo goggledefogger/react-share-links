@@ -76,6 +76,15 @@ firebase deploy
 
 This project was bootstrapped with Create React App.
 
+## Feature Wish List
+
+- Channel visibility public or private or group access
+- Share channel via email
+- Share link via email
+- Hover on emoji shows username of user who posted it
+- Tag link with person or group and let it suggest a channel
+- Browser extension to post current site as a link to a channel
+
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information. (basically "use it however you want, but don't blame us if something goes wrong")
