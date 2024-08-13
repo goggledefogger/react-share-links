@@ -1,48 +1,71 @@
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import LinkItem from './LinkItem';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+// src/components/LinkItem/LinkItem.test.tsx
 
-jest.mock('firebase/functions');
+import React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import LinkItem from "./LinkItem";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
-describe('LinkItem Component', () => {
-  const mockFetchLinkPreview = jest.fn();
+jest.mock("firebase/functions");
+
+describe("LinkItem Component", () => {
+  const mockPreviewData = {
+    title: "Test Title",
+    description: "Test Description",
+    image: "https://example.com/image.jpg",
+    favicon: "https://example.com/favicon.ico",
+  };
+
+  const link = {
+    id: "test-id",
+    channelId: "test-channel-id",
+    userId: "test-user-id",
+    url: "https://example.com",
+    createdAt: Date.now(),
+    reactions: [],
+    username: "test-username",
+    preview: null, // Start with null preview
+  };
 
   beforeEach(() => {
-    (getFunctions as jest.Mock).mockReturnValue({});
-    (httpsCallable as jest.Mock).mockReturnValue(mockFetchLinkPreview);
-  });
-
-  it('fetches and displays link preview', async () => {
-    const mockPreviewData = {
-      title: 'Test Title',
-      description: 'Test Description',
-      image: 'https://example.com/image.jpg',
-      favicon: 'https://example.com/favicon.ico',
-    };
-
-    mockFetchLinkPreview.mockResolvedValue({ data: mockPreviewData });
-
-    render(<LinkItem url="https://example.com" />);
-
-    expect(screen.getByText('Loading preview...')).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(screen.getByText('Test Title')).toBeInTheDocument();
-      expect(screen.getByText('Test Description')).toBeInTheDocument();
-      expect(screen.getByAltText('Preview')).toHaveAttribute('src', 'https://example.com/image.jpg');
-      expect(screen.getByAltText('Favicon')).toHaveAttribute('src', 'https://example.com/favicon.ico');
+    (getFunctions as jest.Mock).mockReturnValue({
+      httpsCallable: jest.fn((functionName) => {
+        if (functionName === "fetchLinkPreview") {
+          return jest.fn().mockResolvedValue({ data: mockPreviewData });
+        }
+        return jest.fn();
+      }),
     });
   });
 
-  it('handles errors when fetching link preview', async () => {
-    mockFetchLinkPreview.mockRejectedValue(new Error('Failed to fetch preview'));
+  it("fetches and displays link preview", async () => {
+    render(
+      <LinkItem
+        link={link}
+        onDelete={jest.fn()}
+        onReact={jest.fn()}
+        onRemoveReaction={jest.fn()}
+      />
+    );
 
-    render(<LinkItem url="https://example.com" />);
+    // Initially, the preview should be loading
+    expect(screen.getByText("Preview not available")).toBeInTheDocument();
 
+    // Wait for the preview data to be fetched and displayed
     await waitFor(() => {
-      expect(screen.getByText('Failed to load preview')).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Test Title" })
+      ).toBeInTheDocument();
+      expect(screen.getByText("Test Description")).toBeInTheDocument();
+      expect(screen.getByRole("img", { name: "Link preview" })).toHaveAttribute(
+        "src",
+        "https://example.com/image.jpg"
+      );
+      expect(screen.getByRole("img", { name: "Favicon" })).toHaveAttribute(
+        "src",
+        "https://example.com/favicon.ico"
+      );
     });
   });
+
 });

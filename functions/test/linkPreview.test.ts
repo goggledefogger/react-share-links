@@ -17,7 +17,7 @@ describe("fetchLinkPreview Firebase Function", () => {
     test.cleanup();
   });
 
-  it("fetches link preview successfully", async () => {
+  it("fetches link preview from mock successfully", async () => {
     const mockHtml = `
       <html>
         <head>
@@ -54,5 +54,14 @@ describe("fetchLinkPreview Firebase Function", () => {
     await expect(
       wrapped({ url: "https://example.com" }, { auth: null })
     ).rejects.toThrow("User must be authenticated to fetch link previews");
+  });
+
+  it("fetches the real preview from example.com", async () => {
+    const result = await wrapped({ url: "https://example.com" }, { auth: {} });
+
+    expect(result.title).toBe("Example Domain");
+    expect(result.description).toBe("This domain is for use in illustrative examples in documents.");
+    expect(result.image).toBe("");
+    expect(result.favicon).toBe("https://www.iana.org/_img/2021/iana-logo-header.svg");
   });
 });

@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { Client } from "node-mailjet";
+import axios from "axios";
 
 admin.initializeApp();
 
@@ -232,3 +233,79 @@ export const sendDailyDigest = functions.pubsub
   });
 
 export { sendEmail };
+
+
+function extractMetadata(html: string, metaName: string): string {
+  const metaTag = `<meta name="${metaName}" content="`;
+  const startIndex = html.indexOf(metaTag) + metaTag.length;
+  if (startIndex === -1 + metaTag.length) {
+    return ""; // Meta tag not found
+  }
+  const endIndex = html.indexOf("\"", startIndex);
+  return html.substring(startIndex, endIndex);
+}
+
+function extractOgMetadata(html: string, propertyName: string): string {
+  const ogTag = `<meta property="og:${propertyName}" content="`;
+  const startIndex = html.indexOf(ogTag) + ogTag.length;
+  if (startIndex === -1 + ogTag.length) {
+    return ""; // Meta tag not found
+  }
+  const endIndex = html.indexOf("\"", startIndex);
+  return html.substring(startIndex, endIndex);
+}
+
+function extractLinkTag(html: string, relAttribute: string): string {
+  const linkTag = `<link rel="${relAttribute}" href="`;
+  const startIndex = html.indexOf(linkTag) + linkTag.length;
+  if (startIndex === -1 + linkTag.length) {
+    return ""; // Link tag not found
+  }
+  const endIndex = html.indexOf("\"", startIndex);
+  return html.substring(startIndex, endIndex);
+}
+
+export const fetchLinkPreview = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "User must be authenticated to fetch link previews"
+    );
+  }
+
+  const { url } = data;
+
+  try {
+    const response = await axios.get(url);
+    const html = response.data;
+
+    const titleMatch = html.match(/<title>(.*?)<\/title>/);
+    const title = titleMatch ? titleMatch[1].trim() : "";
+
+    const descriptionMatch = html.match(/<meta name="description" content="(.*?)">/);
+    const ogDescriptionMatch = html.match(/<meta property="og:description" content="(.*?)">/);
+    const description = (descriptionMatch ? descriptionMatch[1] : "") ||
+      (ogDescriptionMatch ? ogDescriptionMatch[1] : "");
+
+    const imageMatch = html.match(/<meta property="og:image" content="(.*?)">/);
+    const twitterImageMatch = html.match(/<meta name="twitter:image" content="(.*?)">/);
+    const image = (imageMatch ? imageMatch[1] : "") ||
+      (twitterImageMatch ? twitterImageMatch[1] : "");
+
+    const faviconMatch = html.match(/<link rel="(icon|shortcut icon)" href="(.*?)">/);
+    const favicon = faviconMatch ? faviconMatch[2] : "";
+
+    return {
+      title,
+      description,
+      image,
+      favicon,
+    };
+  } catch (error) {
+    console.error("Error fetching link preview:", error);
+    throw new functions.https.HttpsError(
+      "internal",
+      "Failed to fetch link preview"
+    );
+  }
+});
