@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
-import { useChannels } from '../../hooks/useChannels';
-import { useAuthUser } from '../../hooks/useAuthUser';
-import { Channel, Link } from '../../types';
-import { useToast } from '../../contexts/ToastContext';
-import Form from '../common/Form';
-import ConfirmDialog from '../common/ConfirmDialog';
-import LinkItem from '../LinkItem/LinkItem';
-import { QueryDocumentSnapshot } from 'firebase/firestore';
-import './ChannelView.css';
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, Link as RouterLink } from "react-router-dom";
+import { useChannels } from "../../hooks/useChannels";
+import { useAuthUser } from "../../hooks/useAuthUser";
+import { useFirestoreQuery } from "../../hooks/useFirestoreQuery";
+import { Channel, Link } from "../../types";
+import { useToast } from "../../contexts/ToastContext";
+import Form from "../common/Form";
+import ConfirmDialog from "../common/ConfirmDialog";
+import LinkItem from "../LinkItem/LinkItem";
+import { QueryDocumentSnapshot } from "firebase/firestore";
+import "./ChannelView.css";
 
 const LINKS_PER_PAGE = 20;
 
@@ -91,8 +92,8 @@ const ChannelView: React.FC = () => {
         );
         setHasMore(result.links.length === LINKS_PER_PAGE);
       } catch (error) {
-        console.error('Error fetching links:', error);
-        showToast({ message: 'Failed to load links', type: 'error' });
+        console.error("Error fetching links:", error);
+        showToast({ message: "Failed to load links", type: "error" });
       } finally {
         setIsLoadingMore(false);
       }
@@ -105,13 +106,13 @@ const ChannelView: React.FC = () => {
       try {
         const newLink = await addLink(id, url);
         setLinks((prevLinks) => [newLink, ...prevLinks]);
-        showToast({ message: 'Link added successfully', type: 'success' });
+        showToast({ message: "Link added successfully", type: "success" });
       } catch (error) {
-        console.error('Error adding link:', error);
+        console.error("Error adding link:", error);
         showToast({
           message:
-            error instanceof Error ? error.message : 'Failed to add link',
-          type: 'error',
+            error instanceof Error ? error.message : "Failed to add link",
+          type: "error",
         });
       }
     }
@@ -124,7 +125,7 @@ const ChannelView: React.FC = () => {
     } else {
       showToast({
         message: "You don't have permission to delete this link",
-        type: 'error',
+        type: "error",
       });
     }
   };
@@ -136,13 +137,13 @@ const ChannelView: React.FC = () => {
         setLinks((prevLinks) =>
           prevLinks.filter((link) => link.id !== deleteConfirmation.linkId)
         );
-        showToast({ message: 'Link deleted successfully', type: 'success' });
+        showToast({ message: "Link deleted successfully", type: "success" });
       } catch (error) {
-        console.error('Error deleting link:', error);
+        console.error("Error deleting link:", error);
         showToast({
           message:
-            error instanceof Error ? error.message : 'Failed to delete link',
-          type: 'error',
+            error instanceof Error ? error.message : "Failed to delete link",
+          type: "error",
         });
       }
       setDeleteConfirmation({ isOpen: false, linkId: null });
@@ -163,15 +164,15 @@ const ChannelView: React.FC = () => {
                 ...link,
                 reactions: [
                   ...(link.reactions || []),
-                  { emoji, userId: user?.uid || '' },
+                  { emoji, userId: user?.uid || "" },
                 ],
               }
             : link
         )
       );
     } catch (error) {
-      console.error('Error adding emoji reaction:', error);
-      showToast({ message: 'Failed to add emoji reaction', type: 'error' });
+      console.error("Error adding emoji reaction:", error);
+      showToast({ message: "Failed to add emoji reaction", type: "error" });
     }
   };
 
@@ -196,8 +197,8 @@ const ChannelView: React.FC = () => {
         )
       );
     } catch (error) {
-      console.error('Error removing emoji reaction:', error);
-      showToast({ message: 'Failed to remove emoji reaction', type: 'error' });
+      console.error("Error removing emoji reaction:", error);
+      showToast({ message: "Failed to remove emoji reaction", type: "error" });
     }
   };
 
@@ -217,9 +218,9 @@ const ChannelView: React.FC = () => {
         <Form
           fields={[
             {
-              name: 'url',
-              type: 'text',
-              placeholder: 'Enter a URL',
+              name: "url",
+              type: "text",
+              placeholder: "Enter a URL",
               required: true,
             },
           ]}
@@ -247,7 +248,7 @@ const ChannelView: React.FC = () => {
           onClick={fetchLinks}
           className="btn btn-secondary load-more-btn"
           disabled={isLoadingMore}>
-          {isLoadingMore ? 'Loading...' : 'Load More'}
+          {isLoadingMore ? "Loading..." : "Load More"}
         </button>
       )}
 

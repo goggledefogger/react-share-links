@@ -1,8 +1,27 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { Client } from "node-mailjet";
+import { getLinkPreview } from "link-preview-js";
 
 admin.initializeApp();
+
+interface LinkData {
+  url: string;
+  channelId: string;
+  createdAt: admin.firestore.Timestamp;
+  preview?: LinkPreview;
+}
+
+interface LinkPreview {
+  title?: string;
+  description?: string;
+  image?: string;
+  favicon?: string;
+  mediaType: string;
+  contentType: string;
+}
+
+const LINK_PREVIEW_TIMEOUT = 10000; // 10 seconds
 
 const apiKey =
   process.env.MJ_APIKEY_PUBLIC || functions.config().mailjet?.api_key;
@@ -229,6 +248,66 @@ export const sendDailyDigest = functions.pubsub
   .onRun(async () => {
     console.log("Starting daily digest");
     return sendDigest("daily", 1);
+  });
+
+exports.fetchAndSaveLinkPreview = functions.firestore
+  .document("links/{linkId}")
+  .onCreate(async (snap, context) => {
+    const linkData = snap.data() as LinkData;
+    const linkId = context.params.linkId;
+
+    if (!linkData.url) {
+      functions.logger.error("No URL found for link:", linkId);
+      return null;
+    }
+
+    try {
+      const preview = await getLinkPreview(linkData.url, {
+        timeout: LINK_PREVIEW_TIMEOUT,
+        followRedirects: "error",
+      });
+
+      let previewData: LinkPreview;
+
+      if ("title" in preview) {
+        // This is for HTML content
+        previewData = {
+          title: preview.title || "",
+          description: preview.description || "",
+          image:
+            preview.images && preview.images.length > 0 ?
+              preview.images[0] :
+              undefined,
+          favicon:
+            preview.favicons && preview.favicons.length > 0 ?
+              preview.favicons[0] :
+              undefined,
+          mediaType: preview.mediaType,
+          contentType: preview.contentType || "text/html",
+        };
+      } else {
+        // This is for non-HTML content (images, audio, video, application)
+        previewData = {
+          title: preview.url,
+          mediaType: preview.mediaType,
+          contentType: preview.contentType || "application/octet-stream",
+          favicon:
+            preview.favicons && preview.favicons.length > 0 ?
+              preview.favicons[0] :
+              undefined,
+        };
+      }
+
+      await admin.firestore().collection("links").doc(linkId).update({
+        preview: previewData,
+      });
+
+      functions.logger.info("Link preview saved for:", linkId);
+      return null; // Explicitly return null after successful execution
+    } catch (error) {
+      functions.logger.error("Error fetching link preview for:", linkId, error);
+      return null; // Explicitly return null in case of an error
+    }
   });
 
 export { sendEmail };

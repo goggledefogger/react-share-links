@@ -15,7 +15,10 @@ service cloud.firestore {
         // Allow updates that don't modify reactions
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['reactions']) ||
         // Or allow any updates to reactions for debugging
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']) ||
+        // Allow updates to the preview field by the Cloud Function
+        (request.auth.token.firebase.sign_in_provider == 'google.com' &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['preview']))
       ) || debug(false, 'Update denied: ' + debug(request.resource.data.diff(resource.data)));
       allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
     }

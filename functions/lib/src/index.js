@@ -5,7 +5,9 @@ exports.sendEmail = exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const node_mailjet_1 = require("node-mailjet");
+const link_preview_js_1 = require("link-preview-js");
 admin.initializeApp();
+const LINK_PREVIEW_TIMEOUT = 10000; // 10 seconds
 const apiKey = process.env.MJ_APIKEY_PUBLIC || ((_a = functions.config().mailjet) === null || _a === void 0 ? void 0 : _a.api_key);
 const apiSecret = process.env.MJ_APIKEY_PRIVATE || ((_b = functions.config().mailjet) === null || _b === void 0 ? void 0 : _b.api_secret);
 const mailjet = new node_mailjet_1.Client({
@@ -184,5 +186,57 @@ exports.sendDailyDigest = functions.pubsub
     .onRun(async () => {
     console.log("Starting daily digest");
     return sendDigest("daily", 1);
+});
+exports.fetchAndSaveLinkPreview = functions.firestore
+    .document("links/{linkId}")
+    .onCreate(async (snap, context) => {
+    const linkData = snap.data();
+    const linkId = context.params.linkId;
+    if (!linkData.url) {
+        functions.logger.error("No URL found for link:", linkId);
+        return null;
+    }
+    try {
+        const preview = await (0, link_preview_js_1.getLinkPreview)(linkData.url, {
+            timeout: LINK_PREVIEW_TIMEOUT,
+            followRedirects: "error",
+        });
+        let previewData;
+        if ("title" in preview) {
+            // This is for HTML content
+            previewData = {
+                title: preview.title || "",
+                description: preview.description || "",
+                image: preview.images && preview.images.length > 0 ?
+                    preview.images[0] :
+                    undefined,
+                favicon: preview.favicons && preview.favicons.length > 0 ?
+                    preview.favicons[0] :
+                    undefined,
+                mediaType: preview.mediaType,
+                contentType: preview.contentType || "text/html",
+            };
+        }
+        else {
+            // This is for non-HTML content (images, audio, video, application)
+            previewData = {
+                title: preview.url,
+                mediaType: preview.mediaType,
+                contentType: preview.contentType || "application/octet-stream",
+                favicon: preview.favicons && preview.favicons.length > 0 ?
+                    preview.favicons[0] :
+                    undefined,
+            };
+        }
+        await admin.firestore().collection("links").doc(linkId).update({
+            preview: previewData,
+        });
+        functions.logger.info("Link preview saved for:", linkId);
+        return null; // Explicitly return null after successful execution
+    }
+    catch (error) {
+        functions.logger.error("Error fetching link preview for:", linkId, error);
+        return null; // Explicitly return null in case of an error
+    }
 });
 //# sourceMappingURL=index.js.map

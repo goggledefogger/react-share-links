@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import {
   collection,
   query,
@@ -16,9 +16,9 @@ import {
   startAfter,
   arrayUnion,
   arrayRemove,
-} from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
-import { Channel, Link } from '../types';
+} from "firebase/firestore";
+import { db, auth } from "../lib/firebase";
+import { Channel, Link } from "../types";
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 2000; // 2 seconds
@@ -33,8 +33,8 @@ export function useChannels() {
     setLoading(true);
     setError(null);
     try {
-      const channelsCollection = collection(db, 'channels');
-      const q = query(channelsCollection, orderBy('createdAt', 'desc'));
+      const channelsCollection = collection(db, "channels");
+      const q = query(channelsCollection, orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
       const updatedChannels = snapshot.docs.map(
         (doc) => ({ id: doc.id, ...doc.data() } as Channel)
@@ -42,8 +42,8 @@ export function useChannels() {
       setChannelList(updatedChannels);
       setRetryCount(0); // Reset retry count on successful fetch
     } catch (err) {
-      console.error('Error fetching channels:', err);
-      setError('Failed to fetch channels');
+      console.error("Error fetching channels:", err);
+      setError("Failed to fetch channels");
 
       // Implement retry logic
       if (retryCount < MAX_RETRY_ATTEMPTS) {
@@ -61,13 +61,13 @@ export function useChannels() {
 
   const getChannel = async (channelId: string): Promise<Channel | null> => {
     try {
-      const channelDoc = await getDoc(doc(db, 'channels', channelId));
+      const channelDoc = await getDoc(doc(db, "channels", channelId));
       if (channelDoc.exists()) {
         return { id: channelDoc.id, ...channelDoc.data() } as Channel;
       }
       return null;
     } catch (error) {
-      console.error('Error fetching channel:', error);
+      console.error("Error fetching channel:", error);
       throw error;
     }
   };
@@ -81,11 +81,11 @@ export function useChannels() {
     lastVisible: QueryDocumentSnapshot<Link> | undefined;
   }> => {
     try {
-      const linksCollection = collection(db, 'links');
+      const linksCollection = collection(db, "links");
       let q = query(
         linksCollection,
-        where('channelId', '==', channelId),
-        orderBy('createdAt', 'desc'),
+        where("channelId", "==", channelId),
+        orderBy("createdAt", "desc"),
         firestoreLimit(limitCount)
       );
 
@@ -111,14 +111,14 @@ export function useChannels() {
         lastVisible: lastVisibleDoc,
       };
     } catch (error) {
-      console.error('Error fetching channel links:', error);
+      console.error("Error fetching channel links:", error);
       throw error;
     }
   };
 
   const addChannel = async (channelName: string) => {
     const user = auth.currentUser;
-    if (!user) throw new Error('User must be logged in to create a channel');
+    if (!user) throw new Error("User must be logged in to create a channel");
 
     try {
       const newChannel = {
@@ -126,41 +126,41 @@ export function useChannels() {
         createdBy: user.uid,
         createdAt: Date.now(),
       };
-      const docRef = await addDoc(collection(db, 'channels'), newChannel);
+      const docRef = await addDoc(collection(db, "channels"), newChannel);
       await fetchChannels(); // Refresh the channel list
       return docRef.id;
     } catch (error) {
-      console.error('Error adding channel:', error);
+      console.error("Error adding channel:", error);
       throw error;
     }
   };
 
   const deleteChannel = async (channelId: string) => {
     try {
-      await deleteDoc(doc(db, 'channels', channelId));
+      await deleteDoc(doc(db, "channels", channelId));
       await fetchChannels(); // Refresh the channel list
     } catch (error) {
-      console.error('Error deleting channel:', error);
+      console.error("Error deleting channel:", error);
       throw error;
     }
   };
 
   const updateChannel = async (channelId: string, newName: string) => {
     try {
-      await updateDoc(doc(db, 'channels', channelId), { name: newName.trim() });
+      await updateDoc(doc(db, "channels", channelId), { name: newName.trim() });
       await fetchChannels(); // Refresh the channel list
     } catch (error) {
-      console.error('Error updating channel:', error);
+      console.error("Error updating channel:", error);
       throw error;
     }
   };
 
   const addLink = async (channelId: string, url: string): Promise<Link> => {
     const user = auth.currentUser;
-    if (!user) throw new Error('User must be logged in to add a link');
+    if (!user) throw new Error("User must be logged in to add a link");
 
     try {
-      const newLink: Omit<Link, 'id'> = {
+      const newLink: Omit<Link, "id"> = {
         channelId,
         userId: user.uid,
         url,
@@ -168,19 +168,19 @@ export function useChannels() {
         reactions: [],
         preview: null, // Add a default value for preview
       };
-      const docRef = await addDoc(collection(db, 'links'), newLink);
+      const docRef = await addDoc(collection(db, "links"), newLink);
       return { id: docRef.id, ...newLink };
     } catch (error) {
-      console.error('Error adding link:', error);
+      console.error("Error adding link:", error);
       throw error;
     }
   };
 
   const deleteLink = async (linkId: string) => {
     try {
-      await deleteDoc(doc(db, 'links', linkId));
+      await deleteDoc(doc(db, "links", linkId));
     } catch (error) {
-      console.error('Error deleting link:', error);
+      console.error("Error deleting link:", error);
       throw error;
     }
   };
@@ -190,14 +190,14 @@ export function useChannels() {
     emoji: string,
     userId: string | undefined
   ) => {
-    if (!userId) throw new Error('User must be logged in to add a reaction');
+    if (!userId) throw new Error("User must be logged in to add a reaction");
     try {
-      const linkRef = doc(db, 'links', linkId);
+      const linkRef = doc(db, "links", linkId);
       await updateDoc(linkRef, {
         reactions: arrayUnion({ emoji, userId }),
       });
     } catch (error) {
-      console.error('Error adding emoji reaction:', error);
+      console.error("Error adding emoji reaction:", error);
       throw error;
     }
   };
@@ -207,14 +207,14 @@ export function useChannels() {
     emoji: string,
     userId: string | undefined
   ) => {
-    if (!userId) throw new Error('User must be logged in to remove a reaction');
+    if (!userId) throw new Error("User must be logged in to remove a reaction");
     try {
-      const linkRef = doc(db, 'links', linkId);
+      const linkRef = doc(db, "links", linkId);
       await updateDoc(linkRef, {
         reactions: arrayRemove({ emoji, userId }),
       });
     } catch (error) {
-      console.error('Error removing emoji reaction:', error);
+      console.error("Error removing emoji reaction:", error);
       throw error;
     }
   };
@@ -222,8 +222,8 @@ export function useChannels() {
   const getAllChannelLinkCounts = async () => {
     const counts: { [key: string]: number } = {};
     for (const channel of channelList) {
-      const linksCollection = collection(db, 'links');
-      const q = query(linksCollection, where('channelId', '==', channel.id));
+      const linksCollection = collection(db, "links");
+      const q = query(linksCollection, where("channelId", "==", channel.id));
       const snapshot = await getCountFromServer(q);
       counts[channel.id] = snapshot.data().count;
     }
@@ -232,14 +232,14 @@ export function useChannels() {
 
   const getUsernameById = async (userId: string) => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userDoc = await getDoc(doc(db, "users", userId));
       if (userDoc.exists()) {
-        return userDoc.data().username || 'Unknown User';
+        return userDoc.data().username || "Unknown User";
       }
-      return 'Unknown User';
+      return "Unknown User";
     } catch (error) {
-      console.error('Error fetching username:', error);
-      return 'Unknown User';
+      console.error("Error fetching username:", error);
+      return "Unknown User";
     }
   };
 
