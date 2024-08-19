@@ -193,7 +193,6 @@ exports.fetchAndSaveLinkPreview = functions.firestore
     .onCreate(async (snap, context) => {
     const linkData = snap.data();
     const linkId = context.params.linkId;
-    functions.logger.info("Fetching link preview for:", linkId);
     functions.logger.info("Fetching link data:", JSON.stringify(snap.data()));
     if (!linkData.url) {
         functions.logger.error("No URL found for link:", linkId);
@@ -211,6 +210,7 @@ exports.fetchAndSaveLinkPreview = functions.firestore
         const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
         const response = await fetch(youtubeApiUrl);
         const data = await response.json();
+        functions.logger.debug("YouTube API response:", JSON.stringify(data));
         if (data.items && data.items.length > 0) {
             const video = data.items[0];
             const previewData = {
