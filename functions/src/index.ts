@@ -1,8 +1,28 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { Client } from "node-mailjet";
+import { getLinkPreview } from "link-preview-js";
+import { getYoutubeVideoId, isYoutubeUrl } from "./utils/youtubeUtils";
 
 admin.initializeApp();
+
+interface LinkData {
+  url: string;
+  channelId: string;
+  createdAt: admin.firestore.Timestamp;
+  preview?: LinkPreview;
+}
+
+interface LinkPreview {
+  title?: string;
+  description?: string;
+  image?: string;
+  favicon?: string;
+  mediaType: string;
+  contentType: string;
+}
+
+const LINK_PREVIEW_TIMEOUT = 10000; // 10 seconds
 
 const apiKey =
   process.env.MJ_APIKEY_PUBLIC || functions.config().mailjet?.api_key;
@@ -229,6 +249,156 @@ export const sendDailyDigest = functions.pubsub
   .onRun(async () => {
     console.log("Starting daily digest");
     return sendDigest("daily", 1);
+  });
+
+exports.fetchAndSaveLinkPreview = functions.firestore
+  .document("links/{linkId}")
+  .onCreate(async (snap, context) => {
+    const linkData = snap.data() as LinkData;
+    const linkId = context.params.linkId;
+
+    functions.logger.info("Fetching link data:", JSON.stringify(snap.data()));
+
+    if (!linkData.url) {
+      functions.logger.error("No URL found for link:", linkId);
+      return null;
+    }
+
+    // if the linkData.url is from either youtube.com or youtu.be, case insensitive
+    if (isYoutubeUrl(linkData.url)) {
+      // extract video ID from YouTube URL, considering a null value
+      const videoId = getYoutubeVideoId(linkData.url);
+      if (!videoId) {
+        functions.logger.error(
+          "No video ID found for YouTube link:",
+          linkData.url
+        );
+        return null;
+      }
+
+      const youtubeApiKey = functions.config().youtube.api_key;
+      const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
+      const response = await fetch(youtubeApiUrl);
+      const data = await response.json();
+      functions.logger.debug("YouTube API response:", JSON.stringify(data));
+
+      if (data.items && data.items.length > 0) {
+        const video = data.items[0];
+        const previewData: Partial<LinkPreview> = {
+          title: video.snippet.title,
+          description: video.snippet.description,
+          image: video.snippet.thumbnails.high.url,
+          mediaType: "video",
+          contentType: "text/html",
+        };
+
+        await admin.firestore().collection("links").doc(linkId).update({
+          preview: previewData,
+        });
+
+        functions.logger.info("Link preview saved for:", linkId);
+        return null;
+      } else {
+        functions.logger.error("No video found for YouTube link:", linkId);
+        return null;
+      }
+    }
+
+    const maxRetries = 3;
+    let retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      try {
+        const preview = await getLinkPreview(linkData.url, {
+          timeout: LINK_PREVIEW_TIMEOUT,
+          followRedirects: "error",
+        });
+
+        functions.logger.info(
+          "Raw preview data:",
+          JSON.stringify(preview, null, 2)
+        );
+
+        const previewData: Partial<LinkPreview> = {
+          mediaType: preview.mediaType,
+          contentType: preview.contentType || "text/html",
+        };
+
+        if ("title" in preview) {
+          // This is for HTML content
+          previewData.title = preview.title || "";
+          previewData.description = preview.description || "";
+          if (preview.images && preview.images.length > 0) {
+            previewData.image = preview.images[0];
+          }
+          if (preview.favicons && preview.favicons.length > 0) {
+            previewData.favicon = preview.favicons[0];
+          }
+        } else {
+          // This is for non-HTML content (images, audio, video, application)
+          previewData.title = preview.url;
+          if (preview.favicons && preview.favicons.length > 0) {
+            previewData.favicon = preview.favicons[0];
+          }
+        }
+
+        // Log which fields are undefined
+        Object.keys(previewData).forEach((key) => {
+          if (previewData[key as keyof LinkPreview] === undefined) {
+            functions.logger.warn(
+              `Field ${key} is undefined for link ${linkId}`
+            );
+          }
+        });
+
+        // Remove any undefined fields
+        Object.keys(previewData).forEach(
+          (key) =>
+            previewData[key as keyof LinkPreview] === undefined &&
+            delete previewData[key as keyof LinkPreview]
+        );
+
+        await admin.firestore().collection("links").doc(linkId).update({
+          preview: previewData,
+        });
+
+        functions.logger.info("Link preview saved for:", linkId);
+        return null;
+      } catch (error) {
+        functions.logger.error(
+          `Error fetching link preview for ${linkId} (Attempt ${
+            retryCount + 1
+          }):`,
+          error
+        );
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          functions.logger.error(
+            `Failed to fetch link preview for ${linkId} after ${maxRetries} attempts`
+          );
+          // Save a minimal preview to avoid future retries
+          await admin
+            .firestore()
+            .collection("links")
+            .doc(linkId)
+            .update({
+              preview: {
+                title: linkData.url,
+                mediaType: "text/html",
+                contentType: "text/html",
+              },
+            });
+          return null;
+        }
+        // Wait before retrying (exponential backoff)
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * Math.pow(2, retryCount))
+        );
+      }
+    }
+
+    // This line ensures that all code paths return a value
+    return null;
   });
 
 export { sendEmail };

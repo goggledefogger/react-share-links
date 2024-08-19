@@ -1,30 +1,117 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
-import { useChannels } from '../../hooks/useChannels';
-import { useAuthUser } from '../../hooks/useAuthUser';
-import { Channel, Link } from '../../types';
-import { useToast } from '../../contexts/ToastContext';
-import Form from '../common/Form';
-import ConfirmDialog from '../common/ConfirmDialog';
-import LinkItem from '../LinkItem/LinkItem';
-import { QueryDocumentSnapshot } from 'firebase/firestore';
-import './ChannelView.css';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
+import { useParams, Link as RouterLink } from "react-router-dom";
+import { useChannels } from "../../hooks/useChannels";
+import { useAuthUser } from "../../hooks/useAuthUser";
+import { Channel, Link } from "../../types";
+import {
+  collection,
+  doc,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  Unsubscribe,
+} from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import Form from "../common/Form";
+import ConfirmDialog from "../common/ConfirmDialog";
+import LinkItem from "../LinkItem/LinkItem";
+import { useToast } from "../../contexts/ToastContext";
+import LoadingSpinner from "../common/LoadingSpinner";
+import "./ChannelView.css";
 
 const LINKS_PER_PAGE = 20;
 
+const useChannelData = (channelId: string | undefined) => {
+  const [channelData, setChannelData] = useState<{
+    channel: Channel | null;
+    links: Link[];
+  }>({ channel: null, links: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const unsubscribeRef = useRef<Unsubscribe | null>(null);
+
+  useEffect(() => {
+    if (!channelId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    const channelRef = doc(db, "channels", channelId);
+    const linksQuery = query(
+      collection(db, "links"),
+      where("channelId", "==", channelId),
+      orderBy("createdAt", "desc"),
+      limit(LINKS_PER_PAGE)
+    );
+
+    const unsubscribe = onSnapshot(
+      channelRef,
+      (channelDoc) => {
+        if (!channelDoc.exists()) {
+          setError(new Error("Channel not found"));
+          setLoading(false);
+          return;
+        }
+
+        const channelData = {
+          id: channelDoc.id,
+          ...channelDoc.data(),
+        } as Channel;
+
+        const linksUnsubscribe = onSnapshot(
+          linksQuery,
+          (linksSnapshot) => {
+            const links = linksSnapshot.docs.map(
+              (doc) => ({ id: doc.id, ...doc.data() } as Link)
+            );
+            setChannelData({ channel: channelData, links });
+            setLoading(false);
+          },
+          (err) => {
+            console.error("Error fetching links:", err);
+            setError(err);
+            setLoading(false);
+          }
+        );
+
+        unsubscribeRef.current = () => {
+          linksUnsubscribe();
+        };
+      },
+      (err) => {
+        console.error("Error fetching channel:", err);
+        setError(err);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+      }
+    };
+  }, [channelId]);
+
+  return { ...channelData, loading, error };
+};
+
 const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [channel, setChannel] = useState<Channel | null>(null);
-  const [links, setLinks] = useState<Link[]>([]);
-  const {
-    getChannel,
-    getChannelLinks,
-    addLink,
-    deleteLink,
-    addEmojiReaction,
-    removeEmojiReaction,
-    getUsernameById,
-  } = useChannels();
+  const { channel, links, loading, error } = useChannelData(id);
+  const { addLink, deleteLink, addEmojiReaction, removeEmojiReaction } =
+    useChannels();
   const { showToast } = useToast();
   const { user } = useAuthUser();
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -34,180 +121,109 @@ const ChannelView: React.FC = () => {
     isOpen: false,
     linkId: null,
   });
-  const [lastVisible, setLastVisible] = useState<
-    QueryDocumentSnapshot<Link> | undefined
-  >(undefined);
-  const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  useEffect(() => {
-    const fetchChannelAndLinks = async () => {
-      if (id) {
-        const fetchedChannel = await getChannel(id);
-        setChannel(fetchedChannel);
-        const { links: fetchedLinks, lastVisible: lastVisibleDoc } =
-          await getChannelLinks(id);
-
-        // Fetch usernames for all links
-        const linksWithUsernames = await Promise.all(
-          fetchedLinks.map(async (link) => {
-            const username = await getUsernameById(link.userId);
-            return { ...link, username };
-          })
-        );
-
-        setLinks(linksWithUsernames);
-        setLastVisible(lastVisibleDoc);
-        setHasMore(fetchedLinks.length === LINKS_PER_PAGE);
+  const handleAddLink = useCallback(
+    async (formData: { [key: string]: string }) => {
+      const { url } = formData;
+      if (id && url.trim()) {
+        try {
+          await addLink(id, url);
+          showToast({ message: "Link added successfully", type: "success" });
+        } catch (error) {
+          console.error("Error adding link:", error);
+          showToast({
+            message:
+              error instanceof Error ? error.message : "Failed to add link",
+            type: "error",
+          });
+        }
       }
-    };
+    },
+    [id, addLink, showToast]
+  );
 
-    fetchChannelAndLinks();
-  }, [id, getChannel, getChannelLinks, getUsernameById]);
-
-  const fetchLinks = async () => {
-    if (id) {
-      setIsLoadingMore(true);
-      try {
-        const result = await getChannelLinks(id, LINKS_PER_PAGE, lastVisible);
-
-        // Fetch usernames for new links
-        const newLinksWithUsernames = await Promise.all(
-          result.links.map(async (link) => {
-            const username = await getUsernameById(link.userId);
-            return { ...link, username };
-          })
-        );
-
-        setLinks((prevLinks) => {
-          const existingIds = new Set(prevLinks.map((link) => link.id));
-          const newUniqueLinks = newLinksWithUsernames.filter(
-            (link) => !existingIds.has(link.id)
-          );
-          return [...prevLinks, ...newUniqueLinks];
-        });
-        setLastVisible(
-          result.lastVisible as QueryDocumentSnapshot<Link> | undefined
-        );
-        setHasMore(result.links.length === LINKS_PER_PAGE);
-      } catch (error) {
-        console.error('Error fetching links:', error);
-        showToast({ message: 'Failed to load links', type: 'error' });
-      } finally {
-        setIsLoadingMore(false);
-      }
-    }
-  };
-
-  const handleAddLink = async (formData: { [key: string]: string }) => {
-    const { url } = formData;
-    if (id && url.trim()) {
-      try {
-        const newLink = await addLink(id, url);
-        setLinks((prevLinks) => [newLink, ...prevLinks]);
-        showToast({ message: 'Link added successfully', type: 'success' });
-      } catch (error) {
-        console.error('Error adding link:', error);
+  const handleDeleteClick = useCallback(
+    (linkId: string) => {
+      const link = links.find((l) => l.id === linkId);
+      if (link && link.userId === user?.uid) {
+        setDeleteConfirmation({ isOpen: true, linkId });
+      } else {
         showToast({
-          message:
-            error instanceof Error ? error.message : 'Failed to add link',
-          type: 'error',
+          message: "You don't have permission to delete this link",
+          type: "error",
         });
       }
-    }
-  };
+    },
+    [links, user?.uid, showToast]
+  );
 
-  const handleDeleteClick = (linkId: string) => {
-    const link = links.find((l) => l.id === linkId);
-    if (link && link.userId === user?.uid) {
-      setDeleteConfirmation({ isOpen: true, linkId });
-    } else {
-      showToast({
-        message: "You don't have permission to delete this link",
-        type: 'error',
-      });
-    }
-  };
-
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (deleteConfirmation.linkId) {
       try {
         await deleteLink(deleteConfirmation.linkId);
-        setLinks((prevLinks) =>
-          prevLinks.filter((link) => link.id !== deleteConfirmation.linkId)
-        );
-        showToast({ message: 'Link deleted successfully', type: 'success' });
+        showToast({ message: "Link deleted successfully", type: "success" });
       } catch (error) {
-        console.error('Error deleting link:', error);
+        console.error("Error deleting link:", error);
         showToast({
           message:
-            error instanceof Error ? error.message : 'Failed to delete link',
-          type: 'error',
+            error instanceof Error ? error.message : "Failed to delete link",
+          type: "error",
         });
       }
       setDeleteConfirmation({ isOpen: false, linkId: null });
     }
-  };
+  }, [deleteConfirmation.linkId, deleteLink, showToast]);
 
-  const handleDeleteCancel = () => {
+  const handleDeleteCancel = useCallback(() => {
     setDeleteConfirmation({ isOpen: false, linkId: null });
-  };
+  }, []);
 
-  const handleReact = async (linkId: string, emoji: string) => {
-    try {
-      await addEmojiReaction(linkId, emoji, user?.uid);
-      setLinks((prevLinks) =>
-        prevLinks.map((link) =>
-          link.id === linkId
-            ? {
-                ...link,
-                reactions: [
-                  ...(link.reactions || []),
-                  { emoji, userId: user?.uid || '' },
-                ],
-              }
-            : link
-        )
-      );
-    } catch (error) {
-      console.error('Error adding emoji reaction:', error);
-      showToast({ message: 'Failed to add emoji reaction', type: 'error' });
-    }
-  };
+  const handleReact = useCallback(
+    async (linkId: string, emoji: string) => {
+      try {
+        await addEmojiReaction(linkId, emoji, user?.uid);
+      } catch (error) {
+        console.error("Error adding emoji reaction:", error);
+        showToast({ message: "Failed to add emoji reaction", type: "error" });
+      }
+    },
+    [addEmojiReaction, user?.uid, showToast]
+  );
 
-  const handleRemoveReaction = async (linkId: string, emoji: string) => {
-    try {
-      await removeEmojiReaction(linkId, emoji, user?.uid);
-      setLinks((prevLinks) =>
-        prevLinks.map((link) =>
-          link.id === linkId
-            ? {
-                ...link,
-                reactions:
-                  link.reactions?.filter(
-                    (reaction) =>
-                      !(
-                        reaction.emoji === emoji &&
-                        reaction.userId === user?.uid
-                      )
-                  ) || [],
-              }
-            : link
-        )
-      );
-    } catch (error) {
-      console.error('Error removing emoji reaction:', error);
-      showToast({ message: 'Failed to remove emoji reaction', type: 'error' });
-    }
-  };
+  const handleRemoveReaction = useCallback(
+    async (linkId: string, emoji: string) => {
+      try {
+        await removeEmojiReaction(linkId, emoji, user?.uid);
+      } catch (error) {
+        console.error("Error removing emoji reaction:", error);
+        showToast({
+          message: "Failed to remove emoji reaction",
+          type: "error",
+        });
+      }
+    },
+    [removeEmojiReaction, user?.uid, showToast]
+  );
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <LoadingSpinner size="large" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="error">Error: {error.message}</div>;
+  }
 
   if (!channel) {
-    return <div className="loading">Loading...</div>;
+    return <div className="error">Channel not found</div>;
   }
 
   return (
     <div className="channel-view">
-      <h2 className="channel-title">Channel: {channel?.name}</h2>
+      <h2 className="channel-title">Channel: {channel.name}</h2>
       <RouterLink to="/" className="back-link">
         Back to Channels
       </RouterLink>
@@ -217,9 +233,9 @@ const ChannelView: React.FC = () => {
         <Form
           fields={[
             {
-              name: 'url',
-              type: 'text',
-              placeholder: 'Enter a URL',
+              name: "url",
+              type: "text",
+              placeholder: "Enter a URL",
               required: true,
             },
           ]}
@@ -242,15 +258,6 @@ const ChannelView: React.FC = () => {
         ))}
       </ul>
 
-      {hasMore && (
-        <button
-          onClick={fetchLinks}
-          className="btn btn-secondary load-more-btn"
-          disabled={isLoadingMore}>
-          {isLoadingMore ? 'Loading...' : 'Load More'}
-        </button>
-      )}
-
       <ConfirmDialog
         isOpen={deleteConfirmation.isOpen}
         message="Are you sure you want to delete this link?"
@@ -261,4 +268,4 @@ const ChannelView: React.FC = () => {
   );
 };
 
-export default ChannelView;
+export default React.memo(ChannelView);

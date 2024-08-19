@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useChannels } from '../../hooks/useChannels';
-import { useAuthUser } from '../../hooks/useAuthUser';
-import { Channel } from '../../types';
-import Form from '../common/Form';
-import ConfirmDialog from '../common/ConfirmDialog';
-import { useToast } from '../../contexts/ToastContext';
-import LoadingSpinner from '../common/LoadingSpinner';
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useChannels } from "../../hooks/useChannels";
+import { useAuthUser } from "../../hooks/useAuthUser";
+import { useFirestoreQuery, QueryConfig } from "../../hooks/useFirestoreQuery";
+import { Channel } from "../../types";
+import Form from "../common/Form";
+import ConfirmDialog from "../common/ConfirmDialog";
+import { useToast } from "../../contexts/ToastContext";
+import LoadingSpinner from "../common/LoadingSpinner";
 import {
   FaUser,
   FaClock,
@@ -14,183 +15,148 @@ import {
   FaLink,
   FaEdit,
   FaTrash,
-} from 'react-icons/fa';
-import { formatRelativeTime } from '../../utils/dateUtils';
-import './ChannelList.css';
+} from "react-icons/fa";
+import { formatRelativeTime } from "../../utils/dateUtils";
+import "./ChannelList.css";
+
+const CHANNELS_PER_PAGE = 20;
 
 const ChannelList: React.FC = () => {
   const navigate = useNavigate();
-  const {
-    channelList,
-    loading,
-    error,
-    fetchChannels,
-    addChannel,
-    deleteChannel,
-    updateChannel,
-    getAllChannelLinkCounts,
-    getUsernameById,
-  } = useChannels();
+  const { addChannel, deleteChannel, updateChannel } = useChannels();
   const { user, profile, loading: authLoading } = useAuthUser();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     channelId: string | null;
-  }>({
-    isOpen: false,
-    channelId: null,
-  });
-  const [linkCounts, setLinkCounts] = useState<{ [key: string]: number }>({});
+  }>({ isOpen: false, channelId: null });
   const { showToast } = useToast();
-  const [creatorUsernames, setCreatorUsernames] = useState<{
-    [key: string]: string;
-  }>({});
 
-  // Memoize channels to avoid recalculations
-  const memoizedChannelList = useMemo(() => channelList, [channelList]);
+  const channelsConfig: QueryConfig = useMemo(
+    () => ({
+      collectionName: "channels",
+      conditions: [],
+      sortBy: { field: "createdAt", direction: "desc" as const },
+      limitCount: CHANNELS_PER_PAGE,
+    }),
+    []
+  );
 
-  // Sort channels: subscribed channels first, then alphabetically
-  const sortedChannels = useMemo(() => {
-    return [...memoizedChannelList].sort((a, b) => {
-      const aSubscribed = profile?.subscribedChannels?.includes(a.id) || false;
-      const bSubscribed = profile?.subscribedChannels?.includes(b.id) || false;
-
-      if (aSubscribed === bSubscribed) {
-        return a.name.localeCompare(b.name);
-      }
-      return aSubscribed ? -1 : 1;
-    });
-  }, [memoizedChannelList, profile?.subscribedChannels]);
-
-  const fetchLinkCounts = useCallback(async () => {
-    try {
-      const counts = await getAllChannelLinkCounts();
-      setLinkCounts(counts);
-    } catch (error) {
-      console.error('Error fetching link counts:', error);
-      showToast({ message: 'Failed to fetch link counts', type: 'error' });
-    }
-  }, [getAllChannelLinkCounts, showToast]);
-
-  const fetchCreatorUsernames = useCallback(async () => {
-    try {
-      const usernames: { [key: string]: string } = {};
-      for (const channel of memoizedChannelList) {
-        usernames[channel.id] = await getUsernameById(channel.createdBy);
-      }
-      setCreatorUsernames(usernames);
-    } catch (error) {
-      console.error('Error fetching creator usernames:', error);
-      showToast({
-        message: 'Failed to fetch creator usernames',
-        type: 'error',
-      });
-    }
-  }, [memoizedChannelList, getUsernameById, showToast]);
-
-  useEffect(() => {
-    if (!loading && !error && memoizedChannelList.length > 0) {
-      fetchLinkCounts();
-      fetchCreatorUsernames();
-    }
-  }, [
+  const {
+    data: channels,
     loading,
     error,
-    memoizedChannelList,
-    fetchLinkCounts,
-    fetchCreatorUsernames,
-  ]);
+    hasMore,
+  } = useFirestoreQuery<Channel>(channelsConfig);
 
-  const handleAddChannel = async (formData: { [key: string]: string }) => {
-    const { channelName } = formData;
-    if (channelName.trim()) {
-      const channelExists = channelList.some(
-        (channel: Channel) =>
-          channel.name.toLowerCase() === channelName.trim().toLowerCase()
-      );
+  const sortedChannels = useMemo(() => {
+    return [...channels].sort((a, b) => {
+      const aSubscribed = profile?.subscribedChannels?.includes(a.id) || false;
+      const bSubscribed = profile?.subscribedChannels?.includes(b.id) || false;
+      if (aSubscribed === bSubscribed) return a.name.localeCompare(b.name);
+      return aSubscribed ? -1 : 1;
+    });
+  }, [channels, profile?.subscribedChannels]);
 
-      if (channelExists) {
-        showToast({
-          message: 'A channel with this name already exists',
-          type: 'error',
-        });
-        return;
-      }
-
-      try {
-        await addChannel(channelName);
-        showToast({ message: 'Channel added successfully', type: 'success' });
-      } catch (error) {
-        console.error('Error adding channel:', error);
-        showToast({ message: 'Failed to add channel', type: 'error' });
-      }
-    }
-  };
-
-  const handleEditChannel = (channel: Channel) => {
-    setEditingChannelId(channel.id);
-  };
-
-  const handleUpdateChannel = async (formData: { [key: string]: string }) => {
-    const { channelName } = formData;
-    if (channelName.trim() && editingChannelId) {
-      const currentChannel = channelList.find(
-        (channel: Channel) => channel.id === editingChannelId
-      );
-      if (currentChannel && currentChannel.name !== channelName.trim()) {
-        const channelExists = channelList.some(
-          (channel: Channel) =>
-            channel.id !== editingChannelId &&
+  const handleAddChannel = useCallback(
+    async (formData: { [key: string]: string }) => {
+      const { channelName } = formData;
+      if (channelName.trim()) {
+        const channelExists = channels.some(
+          (channel) =>
             channel.name.toLowerCase() === channelName.trim().toLowerCase()
         );
 
         if (channelExists) {
           showToast({
-            message: 'A channel with this name already exists',
-            type: 'error',
+            message: "A channel with this name already exists",
+            type: "error",
           });
           return;
         }
 
         try {
-          await updateChannel(editingChannelId, channelName);
-          showToast({
-            message: 'Channel updated successfully',
-            type: 'success',
-          });
+          await addChannel(channelName);
+          showToast({ message: "Channel added successfully", type: "success" });
         } catch (error) {
-          console.error('Error updating channel:', error);
-          showToast({ message: 'Failed to update channel', type: 'error' });
+          console.error("Error adding channel:", error);
+          showToast({ message: "Failed to add channel", type: "error" });
         }
       }
-      setEditingChannelId(null);
-    }
-  };
+    },
+    [channels, addChannel, showToast]
+  );
 
-  const handleDeleteClick = (channelId: string) => {
+  const handleEditChannel = useCallback((channel: Channel) => {
+    setEditingChannelId(channel.id);
+  }, []);
+
+  const handleUpdateChannel = useCallback(
+    async (formData: { [key: string]: string }) => {
+      const { channelName } = formData;
+      if (channelName.trim() && editingChannelId) {
+        const currentChannel = channels.find(
+          (channel: Channel) => channel.id === editingChannelId
+        );
+        if (currentChannel && currentChannel.name !== channelName.trim()) {
+          const channelExists = channels.some(
+            (channel: Channel) =>
+              channel.id !== editingChannelId &&
+              channel.name.toLowerCase() === channelName.trim().toLowerCase()
+          );
+
+          if (channelExists) {
+            showToast({
+              message: "A channel with this name already exists",
+              type: "error",
+            });
+            return;
+          }
+
+          try {
+            await updateChannel(editingChannelId, channelName);
+            showToast({
+              message: "Channel updated successfully",
+              type: "success",
+            });
+          } catch (error) {
+            console.error("Error updating channel:", error);
+            showToast({ message: "Failed to update channel", type: "error" });
+          }
+        }
+        setEditingChannelId(null);
+      }
+    },
+    [channels, editingChannelId, updateChannel, showToast]
+  );
+
+  const handleDeleteClick = useCallback((channelId: string) => {
     setDeleteConfirmation({ isOpen: true, channelId });
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (deleteConfirmation.channelId) {
       try {
         await deleteChannel(deleteConfirmation.channelId);
-        showToast({ message: 'Channel deleted successfully', type: 'success' });
+        showToast({ message: "Channel deleted successfully", type: "success" });
       } catch (error) {
-        console.error('Error deleting channel:', error);
-        showToast({ message: 'Failed to delete channel', type: 'error' });
+        console.error("Error deleting channel:", error);
+        showToast({ message: "Failed to delete channel", type: "error" });
       }
       setDeleteConfirmation({ isOpen: false, channelId: null });
     }
-  };
+  }, [deleteConfirmation.channelId, deleteChannel, showToast]);
 
-  const handleDeleteCancel = () => {
+  const handleDeleteCancel = useCallback(() => {
     setDeleteConfirmation({ isOpen: false, channelId: null });
-  };
+  }, []);
 
-  const handleChannelClick = (channelId: string) => {
-    navigate(`/channel/${channelId}`);
-  };
+  const handleChannelClick = useCallback(
+    (channelId: string) => {
+      navigate(`/channel/${channelId}`);
+    },
+    [navigate]
+  );
 
   if (authLoading || loading) {
     return (
@@ -203,10 +169,7 @@ const ChannelList: React.FC = () => {
   if (error) {
     return (
       <div className="error-container">
-        <p>Error loading channels: {error}</p>
-        <button onClick={fetchChannels} className="btn btn-primary">
-          Retry
-        </button>
+        <p>Error loading channels: {error.message}</p>
       </div>
     );
   }
@@ -215,7 +178,7 @@ const ChannelList: React.FC = () => {
     return (
       <div className="error-container">
         <p>Please log in to view channels.</p>
-        <button onClick={() => navigate('/login')} className="btn btn-primary">
+        <button onClick={() => navigate("/login")} className="btn btn-primary">
           Log In
         </button>
       </div>
@@ -231,16 +194,16 @@ const ChannelList: React.FC = () => {
             key={channel.id}
             className={`channel-item ${
               profile?.subscribedChannels?.includes(channel.id)
-                ? 'subscribed'
-                : ''
+                ? "subscribed"
+                : ""
             }`}>
             {editingChannelId === channel.id ? (
               <Form
                 fields={[
                   {
-                    name: 'channelName',
-                    type: 'text',
-                    placeholder: 'Channel name',
+                    name: "channelName",
+                    type: "text",
+                    placeholder: "Channel name",
                     required: true,
                     defaultValue: channel.name,
                   },
@@ -254,7 +217,7 @@ const ChannelList: React.FC = () => {
                   className="channel-info"
                   onClick={() => handleChannelClick(channel.id)}
                   onKeyPress={(e) =>
-                    e.key === 'Enter' && handleChannelClick(channel.id)
+                    e.key === "Enter" && handleChannelClick(channel.id)
                   }
                   role="button"
                   tabIndex={0}>
@@ -266,24 +229,21 @@ const ChannelList: React.FC = () => {
                   <div className="channel-meta">
                     <span
                       className={`channel-creator ${
-                        channel.createdBy === user?.uid ? 'current-user' : ''
+                        channel.createdBy === user?.uid ? "current-user" : ""
                       }`}>
-                      <FaUser className="icon" />{' '}
-                      {creatorUsernames[channel.id] || 'Loading...'}
+                      <FaUser className="icon" />{" "}
+                      {channel.creatorUsername || "Loading..."}
                     </span>
                     <span
                       className={`channel-date ${
-                        channel.createdBy === user?.uid ? 'current-user' : ''
+                        channel.createdBy === user?.uid ? "current-user" : ""
                       }`}>
-                      <FaClock className="icon" />{' '}
+                      <FaClock className="icon" />{" "}
                       {formatRelativeTime(channel.createdAt)}
                     </span>
                     <span className="channel-link-count">
-                      <FaLink className="icon" />{' '}
-                      {linkCounts[channel.id] !== undefined
-                        ? linkCounts[channel.id]
-                        : '...'}{' '}
-                      links
+                      <FaLink className="icon" />{" "}
+                      {/* Implement link count logic */}
                     </span>
                   </div>
                 </div>
@@ -314,14 +274,23 @@ const ChannelList: React.FC = () => {
           </li>
         ))}
       </ul>
+      {hasMore && (
+        <button
+          onClick={() => {
+            /* Implement load more logic */
+          }}
+          className="btn btn-secondary load-more-btn">
+          Load More
+        </button>
+      )}
       <div className="add-channel-form">
         <h3>Add New Channel</h3>
         <Form
           fields={[
             {
-              name: 'channelName',
-              type: 'text',
-              placeholder: 'New channel name',
+              name: "channelName",
+              type: "text",
+              placeholder: "New channel name",
               required: true,
             },
           ]}
