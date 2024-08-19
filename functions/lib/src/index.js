@@ -198,6 +198,34 @@ exports.fetchAndSaveLinkPreview = functions.firestore
         functions.logger.error("No URL found for link:", linkId);
         return null;
     }
+    // if the linkData.url is from either youtube.com or youtu.be
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)/;
+    if (youtubeRegex.test(linkData.url)) {
+        const videoId = linkData.url.split("v=")[1];
+        const youtubeApiKey = functions.config().youtube.api_key;
+        const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
+        const response = await fetch(youtubeApiUrl);
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+            const video = data.items[0];
+            const previewData = {
+                title: video.snippet.title,
+                description: video.snippet.description,
+                image: video.snippet.thumbnails.high.url,
+                mediaType: "video",
+                contentType: "text/html",
+            };
+            await admin.firestore().collection("links").doc(linkId).update({
+                preview: previewData,
+            });
+            functions.logger.info("Link preview saved for:", linkId);
+            return null;
+        }
+        else {
+            functions.logger.error("No video found for YouTube link:", linkId);
+            return null;
+        }
+    }
     const maxRetries = 3;
     let retryCount = 0;
     while (retryCount < maxRetries) {
