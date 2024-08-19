@@ -38,6 +38,10 @@
   align-items: center;
 }
 
+.link-url .icon {
+  margin-right: 10px; /* Increased space between icon and URL */
+}
+
 .link-actions {
   display: flex;
   align-items: center;
@@ -146,6 +150,17 @@
   display: flex;
   align-items: center;
   margin-right: 15px;
+}
+
+.link-author.current-user,
+.link-date.current-user {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.dark .link-author.current-user,
+.dark .link-date.current-user {
+  color: var(--primary-light);
 }
 
 .icon {

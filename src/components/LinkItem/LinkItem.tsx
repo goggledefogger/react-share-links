@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, Reaction } from '../../types';
 import { useAuthUser } from '../../hooks/useAuthUser';
+import { useChannels } from '../../hooks/useChannels';
 import { FaUser, FaClock, FaLink, FaSmile, FaTrash } from 'react-icons/fa';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import LoadingSpinner from '../common/LoadingSpinner';
@@ -21,8 +22,10 @@ const LinkItem: React.FC<LinkItemProps> = ({
   onRemoveReaction,
 }) => {
   const { user } = useAuthUser();
+  const { getUsernameById } = useChannels();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(!link.preview);
+  const [username, setUsername] = useState<string | null>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const linkCardRef = useRef<HTMLDivElement>(null);
@@ -50,6 +53,14 @@ const LinkItem: React.FC<LinkItemProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    const fetchUsername = async () => {
+      const fetchedUsername = await getUsernameById(link.userId);
+      setUsername(fetchedUsername);
+    };
+    fetchUsername();
+  }, [link.userId, getUsernameById]);
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!(e.target as HTMLElement).closest('.link-actions')) {
@@ -83,7 +94,7 @@ const LinkItem: React.FC<LinkItemProps> = ({
       }>
       <div className="link-card-header">
         <span className="link-url">
-          <FaLink aria-hidden="true" /> {link.url}
+          <FaLink className="icon" aria-hidden="true" /> {link.url}
         </span>
         <div className="link-actions">
           <div className="emoji-button-container">
@@ -149,10 +160,10 @@ const LinkItem: React.FC<LinkItemProps> = ({
       </div>
       <div className="link-card-content">
         <div className="link-meta">
-          <span className="link-author">
-            <FaUser className="icon" /> {link.username}
+          <span className={`link-author ${link.userId === user?.uid ? 'current-user' : ''}`}>
+            <FaUser className="icon" /> {username || 'Loading...'}
           </span>
-          <span className="link-date">
+          <span className={`link-date ${link.userId === user?.uid ? 'current-user' : ''}`}>
             <FaClock className="icon" /> {formatRelativeTime(link.createdAt)}
           </span>
         </div>
