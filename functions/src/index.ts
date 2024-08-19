@@ -256,58 +256,109 @@ exports.fetchAndSaveLinkPreview = functions.firestore
     const linkData = snap.data() as LinkData;
     const linkId = context.params.linkId;
 
+    functions.logger.info("Fetching link preview for:", linkId);
+    functions.logger.info("Fetching link data:", JSON.stringify(snap.data()));
+
     if (!linkData.url) {
       functions.logger.error("No URL found for link:", linkId);
       return null;
     }
 
-    try {
-      const preview = await getLinkPreview(linkData.url, {
-        timeout: LINK_PREVIEW_TIMEOUT,
-        followRedirects: "error",
-      });
+    const maxRetries = 3;
+    let retryCount = 0;
 
-      let previewData: LinkPreview;
+    while (retryCount < maxRetries) {
+      try {
+        const preview = await getLinkPreview(linkData.url, {
+          timeout: LINK_PREVIEW_TIMEOUT,
+          followRedirects: "error",
+        });
 
-      if ("title" in preview) {
-        // This is for HTML content
-        previewData = {
-          title: preview.title || "",
-          description: preview.description || "",
-          image:
-            preview.images && preview.images.length > 0 ?
-              preview.images[0] :
-              undefined,
-          favicon:
-            preview.favicons && preview.favicons.length > 0 ?
-              preview.favicons[0] :
-              undefined,
+        functions.logger.info(
+          "Raw preview data:",
+          JSON.stringify(preview, null, 2)
+        );
+
+        const previewData: Partial<LinkPreview> = {
           mediaType: preview.mediaType,
           contentType: preview.contentType || "text/html",
         };
-      } else {
-        // This is for non-HTML content (images, audio, video, application)
-        previewData = {
-          title: preview.url,
-          mediaType: preview.mediaType,
-          contentType: preview.contentType || "application/octet-stream",
-          favicon:
-            preview.favicons && preview.favicons.length > 0 ?
-              preview.favicons[0] :
-              undefined,
-        };
+
+        if ("title" in preview) {
+          // This is for HTML content
+          previewData.title = preview.title || "";
+          previewData.description = preview.description || "";
+          if (preview.images && preview.images.length > 0) {
+            previewData.image = preview.images[0];
+          }
+          if (preview.favicons && preview.favicons.length > 0) {
+            previewData.favicon = preview.favicons[0];
+          }
+        } else {
+          // This is for non-HTML content (images, audio, video, application)
+          previewData.title = preview.url;
+          if (preview.favicons && preview.favicons.length > 0) {
+            previewData.favicon = preview.favicons[0];
+          }
+        }
+
+        // Log which fields are undefined
+        Object.keys(previewData).forEach((key) => {
+          if (previewData[key as keyof LinkPreview] === undefined) {
+            functions.logger.warn(
+              `Field ${key} is undefined for link ${linkId}`
+            );
+          }
+        });
+
+        // Remove any undefined fields
+        Object.keys(previewData).forEach(
+          (key) =>
+            previewData[key as keyof LinkPreview] === undefined &&
+            delete previewData[key as keyof LinkPreview]
+        );
+
+        await admin.firestore().collection("links").doc(linkId).update({
+          preview: previewData,
+        });
+
+        functions.logger.info("Link preview saved for:", linkId);
+        return null;
+      } catch (error) {
+        functions.logger.error(
+          `Error fetching link preview for ${linkId} (Attempt ${
+            retryCount + 1
+          }):`,
+          error
+        );
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          functions.logger.error(
+            `Failed to fetch link preview for ${linkId} after ${maxRetries} attempts`
+          );
+          // Save a minimal preview to avoid future retries
+          await admin
+            .firestore()
+            .collection("links")
+            .doc(linkId)
+            .update({
+              preview: {
+                title: linkData.url,
+                mediaType: "text/html",
+                contentType: "text/html",
+              },
+            });
+          return null;
+        }
+        // Wait before retrying (exponential backoff)
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * Math.pow(2, retryCount))
+        );
       }
-
-      await admin.firestore().collection("links").doc(linkId).update({
-        preview: previewData,
-      });
-
-      functions.logger.info("Link preview saved for:", linkId);
-      return null; // Explicitly return null after successful execution
-    } catch (error) {
-      functions.logger.error("Error fetching link preview for:", linkId, error);
-      return null; // Explicitly return null in case of an error
     }
+
+    // This line ensures that all code paths return a value
+    return null;
   });
 
 export { sendEmail };

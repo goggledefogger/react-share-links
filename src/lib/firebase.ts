@@ -31,7 +31,7 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-setLogLevel("debug");
+// setLogLevel("debug");
 
 export const logFirestoreOperation = (operation: string, details: any) => {
   console.log(`Firestore ${operation}:`, JSON.stringify(details, null, 2));
