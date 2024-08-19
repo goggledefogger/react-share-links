@@ -6,6 +6,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const node_mailjet_1 = require("node-mailjet");
 const link_preview_js_1 = require("link-preview-js");
+const youtubeUtils_1 = require("./utils/youtubeUtils");
 admin.initializeApp();
 const LINK_PREVIEW_TIMEOUT = 10000; // 10 seconds
 const apiKey = process.env.MJ_APIKEY_PUBLIC || ((_a = functions.config().mailjet) === null || _a === void 0 ? void 0 : _a.api_key);
@@ -198,10 +199,14 @@ exports.fetchAndSaveLinkPreview = functions.firestore
         functions.logger.error("No URL found for link:", linkId);
         return null;
     }
-    // if the linkData.url is from either youtube.com or youtu.be
-    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)/;
-    if (youtubeRegex.test(linkData.url)) {
-        const videoId = linkData.url.split("v=")[1];
+    // if the linkData.url is from either youtube.com or youtu.be, case insensitive
+    if ((0, youtubeUtils_1.isYoutubeUrl)(linkData.url)) {
+        // extract video ID from YouTube URL, considering a null value
+        const videoId = (0, youtubeUtils_1.getYoutubeVideoId)(linkData.url);
+        if (!videoId) {
+            functions.logger.error("No video ID found for YouTube link:", linkData.url);
+            return null;
+        }
         const youtubeApiKey = functions.config().youtube.api_key;
         const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
         const response = await fetch(youtubeApiUrl);

@@ -2,6 +2,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { Client } from "node-mailjet";
 import { getLinkPreview } from "link-preview-js";
+import { getYoutubeVideoId, isYoutubeUrl } from "./utils/youtubeUtils";
 
 admin.initializeApp();
 
@@ -256,7 +257,6 @@ exports.fetchAndSaveLinkPreview = functions.firestore
     const linkData = snap.data() as LinkData;
     const linkId = context.params.linkId;
 
-    functions.logger.info("Fetching link preview for:", linkId);
     functions.logger.info("Fetching link data:", JSON.stringify(snap.data()));
 
     if (!linkData.url) {
@@ -265,14 +265,22 @@ exports.fetchAndSaveLinkPreview = functions.firestore
     }
 
     // if the linkData.url is from either youtube.com or youtu.be, case insensitive
-    const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/i;
+    if (isYoutubeUrl(linkData.url)) {
+      // extract video ID from YouTube URL, considering a null value
+      const videoId = getYoutubeVideoId(linkData.url);
+      if (!videoId) {
+        functions.logger.error(
+          "No video ID found for YouTube link:",
+          linkData.url
+        );
+        return null;
+      }
 
-    if (youtubeRegex.test(linkData.url)) {
-      const videoId = linkData.url.split("v=")[1];
       const youtubeApiKey = functions.config().youtube.api_key;
       const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
       const response = await fetch(youtubeApiUrl);
       const data = await response.json();
+      functions.logger.debug("YouTube API response:", JSON.stringify(data));
 
       if (data.items && data.items.length > 0) {
         const video = data.items[0];

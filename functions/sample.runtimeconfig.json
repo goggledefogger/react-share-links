@@ -3,5 +3,8 @@
     "api_key": "TEST_KEY",
     "api_secret": "TEST_SECRET",
     "sender_email": "TEST@SENDER.COM"
+  },
+  "youtube": {
+    "api_key": "YOUTUBE_API_KEY"
   }
 }
