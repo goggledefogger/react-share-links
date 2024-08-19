@@ -53,8 +53,13 @@ const ChannelList: React.FC = () => {
     return [...channels].sort((a, b) => {
       const aSubscribed = profile?.subscribedChannels?.includes(a.id) || false;
       const bSubscribed = profile?.subscribedChannels?.includes(b.id) || false;
-      if (aSubscribed === bSubscribed) return a.name.localeCompare(b.name);
+
+      if (aSubscribed !== bSubscribed) {
       return aSubscribed ? -1 : 1;
+      }
+
+      // If subscription status is the same, sort by createdAt in descending order
+      return b.createdAt - a.createdAt;
     });
   }, [channels, profile?.subscribedChannels]);
 
