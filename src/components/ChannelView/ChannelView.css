@@ -59,6 +59,9 @@
 .link-list {
   list-style-type: none;
   padding: 0;
+  background-color: var(--surface-light);
+  border-radius: 8px;
+  padding: 1rem;
 }
 
 .load-more-btn {
@@ -83,7 +86,11 @@
 }
 
 .dark .add-link-form {
-  background-color: var(--dark-background-color);
+  background-color: var(--dark-surface-light);
+}
+
+.dark .link-list {
+  background-color: var(--dark-surface-light);
 }
 
 .dark .load-more-btn {

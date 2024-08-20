@@ -83,7 +83,7 @@
 
 /* Dark mode specific styles */
 .dark .channel-item {
-  background-color: var(--surface-dark);
+  background-color: var(--dark-surface-color);
 }
 
 .dark .channel-item span {

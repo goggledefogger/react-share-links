@@ -22,9 +22,6 @@
   --dark-text-color: #e0e0e0;
   --dark-text-light: #b0b0b0;
 
-  /* Theme-independent light surface color */
-  --light-surface-color: #f9fbfd;
-
   /* Breakpoints */
   --breakpoint-sm: 576px;
   --breakpoint-md: 768px;

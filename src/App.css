@@ -16,7 +16,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(to bottom, var(--background-color), var(--surface-color));
+  background-color: var(--background-color);
 }
 
 /* Typography */
@@ -117,6 +117,7 @@ h6 {
 main {
   flex-grow: 1;
   padding: 2rem 1rem;
+  background-color: var(--background-color);
 }
 
 .container {
