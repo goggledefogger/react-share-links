@@ -44,7 +44,7 @@ export function useFirestoreQuery<T extends DocumentData>(
   }, [config]);
 
   const updateData = useCallback((newData: T[]) => {
-    setData((prevData) => [...prevData, ...newData]);
+    setData(newData);
   }, []);
 
   useEffect(() => {
