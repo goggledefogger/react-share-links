@@ -8,11 +8,18 @@
   padding: 15px;
   transition: all 0.3s ease;
   cursor: pointer;
+  z-index: var(--z-index-base);
 }
 
 .link-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
+  z-index: var(--z-index-hovered);
+}
+
+/* New class for when emoji picker is open */
+.link-card.emoji-picker-open {
+  z-index: var(--z-index-dropdown);
 }
 
 .link-card.user-created {
@@ -45,25 +52,34 @@
 .link-actions {
   display: flex;
   align-items: center;
+  position: relative; /* Add this */
 }
 
 .emoji-button-container {
-  position: relative;
+  position: relative; /* Change from absolute to relative */
 }
 
-.btn-icon {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-color);
-  font-size: 1.2rem;
-  padding: 5px;
-  transition: color 0.3s, transform 0.1s;
+.emoji-picker-container {
+  position: absolute;
+  top: calc(100% + 5px); /* Position it 5px below the button */
+  right: 0;
+  z-index: var(--z-index-emoji-picker);
 }
 
-.btn-icon:hover {
-  color: var(--primary-color);
-  transform: scale(1.1);
+.emoji-picker-react {
+  position: static !important; /* Change from absolute to static */
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Dark theme adjustments for emoji picker */
+.dark .emoji-picker-react {
+  background-color: var(--dark-surface-color) !important;
+  border-color: var(--dark-text-light) !important;
+}
+
+.dark .emoji-picker-react .emoji-group:before {
+  background-color: var(--dark-surface-color) !important;
+  color: var(--dark-text-color) !important;
 }
 
 .link-preview-container {
@@ -184,34 +200,6 @@
   transform: scale(1.2);
 }
 
-.emoji-picker-container {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 1000;
-}
-
-.emoji-picker-react {
-  position: absolute !important;
-  top: 0 !important;
-  right: 0 !important;
-  z-index: 1001 !important;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.12);
-}
-
-/* Dark theme adjustments */
-.dark .link-card {
-  border-left-color: var(--dark-secondary-color, #80a89b);
-}
-
-.dark .link-card.user-created {
-  border-left-color: var(--dark-primary-color, #3a6ea5);
-}
-
-.dark .link-thumbnail {
-  background-color: var(--light-surface-color);
-}
-
 @media (max-width: 768px) {
   .link-card {
     padding: 12px;
@@ -242,4 +230,17 @@
     left: 0 !important;
     right: 0 !important;
   }
+}
+
+/* Dark theme adjustments */
+.dark .link-card {
+  border-left-color: var(--dark-secondary-color, #80a89b);
+}
+
+.dark .link-card.user-created {
+  border-left-color: var(--dark-primary-color, #3a6ea5);
+}
+
+.dark .link-thumbnail {
+  background-color: var(--light-surface-color);
 }

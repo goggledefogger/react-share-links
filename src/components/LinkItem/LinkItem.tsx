@@ -5,7 +5,8 @@ import { useChannels } from '../../hooks/useChannels';
 import { FaUser, FaClock, FaLink, FaSmile, FaTrash } from 'react-icons/fa';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import LoadingSpinner from '../common/LoadingSpinner';
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from 'emoji-picker-react';
+import { useTheme } from '../../contexts/ThemeContext';
 import './LinkItem.css';
 
 interface LinkItemProps {
@@ -29,6 +30,10 @@ const LinkItem: React.FC<LinkItemProps> = ({
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const linkCardRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
+  const emojiTheme: Theme = theme === 'dark' ? Theme.DARK : Theme.LIGHT;
+  const emojiStyle: EmojiStyle = EmojiStyle.APPLE;
+  const [activeEmojiPickerId, setActiveEmojiPickerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (link.preview) {
@@ -44,7 +49,7 @@ const LinkItem: React.FC<LinkItemProps> = ({
         emojiButtonRef.current &&
         !emojiButtonRef.current.contains(event.target as Node)
       ) {
-        setShowEmojiPicker(false);
+        setActiveEmojiPickerId(null);
       }
     };
 
@@ -68,21 +73,21 @@ const LinkItem: React.FC<LinkItemProps> = ({
     }
   };
 
-  const handleEmojiClick = (emojiObject: { emoji: string }) => {
-    onReact(link.id, emojiObject.emoji);
-    setShowEmojiPicker(false);
+  const handleEmojiClick = (emojiData: EmojiClickData, event: MouseEvent) => {
+    onReact(link.id, emojiData.emoji);
+    setActiveEmojiPickerId(null);
   };
 
   const handleEmojiButtonClick = (
     event: React.MouseEvent<HTMLButtonElement>
   ) => {
     event.stopPropagation();
-    setShowEmojiPicker(!showEmojiPicker);
+    setActiveEmojiPickerId(prevId => prevId === link.id ? null : link.id);
   };
 
   return (
     <div
-      className={`link-card ${link.userId === user?.uid ? 'user-created' : ''}`}
+      className={`link-card ${link.userId === user?.uid ? 'user-created' : ''} ${activeEmojiPickerId === link.id ? 'emoji-picker-open' : ''}`}
       onClick={handleCardClick}
       ref={linkCardRef}
       role="button"
@@ -103,15 +108,25 @@ const LinkItem: React.FC<LinkItemProps> = ({
               className="btn-icon"
               onClick={handleEmojiButtonClick}
               aria-label="Add Reaction"
-              aria-expanded={showEmojiPicker}>
+              aria-expanded={activeEmojiPickerId === link.id}>
               <FaSmile aria-hidden="true" />
             </button>
-            {showEmojiPicker && (
+            {activeEmojiPickerId === link.id && (
               <div
                 ref={emojiPickerRef}
                 className="emoji-picker-container"
                 onClick={(e) => e.stopPropagation()}>
-                <EmojiPicker onEmojiClick={handleEmojiClick} />
+                <EmojiPicker
+                  onEmojiClick={handleEmojiClick}
+                  theme={emojiTheme}
+                  emojiStyle={emojiStyle}
+                  autoFocusSearch={false}
+                  lazyLoadEmojis={true}
+                  searchPlaceholder="Search emojis..."
+                  skinTonesDisabled
+                  width={300}
+                  height={400}
+                />
               </div>
             )}
           </div>
