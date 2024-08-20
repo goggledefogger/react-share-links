@@ -18,6 +18,7 @@ import {
 } from "react-icons/fa";
 import { formatRelativeTime } from "../../utils/dateUtils";
 import "./ChannelList.css";
+import { useChannelLinkCounts } from "../../hooks/useChannelLinkCounts";
 
 const CHANNELS_PER_PAGE = 20;
 
@@ -63,6 +64,9 @@ const ChannelList: React.FC = () => {
       return b.createdAt - a.createdAt;
     });
   }, [channels, profile?.subscribedChannels]);
+
+  const channelIds = useMemo(() => channels.map(channel => channel.id), [channels]);
+  const { linkCounts, loading: linkCountsLoading, error: linkCountsError } = useChannelLinkCounts(channelIds);
 
   useEffect(() => {
     const fetchCreatorUsernames = async () => {
@@ -270,7 +274,7 @@ const ChannelList: React.FC = () => {
                     </span>
                     <span className="channel-link-count">
                       <FaLink className="icon" />{" "}
-                      {/* Implement link count logic */}
+                      {linkCountsLoading ? "Loading..." : linkCounts[channel.id] || 0}
                     </span>
                   </div>
                 </div>
