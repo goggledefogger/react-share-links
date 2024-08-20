@@ -198,47 +198,36 @@ exports.fetchAndSaveLinkPreview = functions.firestore
         functions.logger.error("No URL found for link:", linkId);
         return null;
     }
-    // if the linkData.url is from either youtube.com or youtu.be, case insensitive
-    if ((0, youtubeUtils_1.isYoutubeUrl)(linkData.url)) {
-        // extract video ID from YouTube URL, considering a null value
-        const videoId = (0, youtubeUtils_1.getYoutubeVideoId)(linkData.url);
-        if (!videoId) {
-            functions.logger.error("No video ID found for YouTube link:", linkData.url);
-            return null;
-        }
-        const youtubeApiKey = functions.config().youtube.api_key;
-        const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
-        const response = await fetch(youtubeApiUrl);
-        const data = await response.json();
-        functions.logger.debug("YouTube API response:", JSON.stringify(data));
-        if (data.items && data.items.length > 0) {
-            const video = data.items[0];
-            const previewData = {
-                title: video.snippet.title,
-                description: video.snippet.description,
-                image: video.snippet.thumbnails.high.url,
-                mediaType: "video",
-                contentType: "text/html",
-            };
-            await admin.firestore().collection("links").doc(linkId).update({
-                preview: previewData,
-            });
-            functions.logger.info("Link preview saved for:", linkId);
-            return null;
-        }
-        else {
-            functions.logger.error("No video found for YouTube link:", linkId);
-            return null;
-        }
-    }
     const maxRetries = 3;
     let retryCount = 0;
-    while (retryCount < maxRetries) {
+    let redirectBlocked = false;
+    while (retryCount < maxRetries && !redirectBlocked) {
         try {
+            functions.logger.info(`Attempt ${retryCount + 1}: Trying manual redirect approach for ${linkData.url}`);
             const preview = await (0, link_preview_js_1.getLinkPreview)(linkData.url, {
+                headers: {
+                    "user-agent": "googlebot",
+                },
                 timeout: LINK_PREVIEW_TIMEOUT,
-                followRedirects: "error",
+                followRedirects: "manual",
+                handleRedirects: (baseURL, forwardedURL) => {
+                    functions.logger.info(`Redirect attempt detected from ${baseURL} to ${forwardedURL}`);
+                    const urlObj = new URL(baseURL);
+                    const forwardedURLObj = new URL(forwardedURL);
+                    if (forwardedURLObj.hostname === urlObj.hostname ||
+                        forwardedURLObj.hostname === "www." + urlObj.hostname ||
+                        "www." + forwardedURLObj.hostname === urlObj.hostname) {
+                        functions.logger.info(`Redirect allowed from ${baseURL} to ${forwardedURL}`);
+                        return true;
+                    }
+                    else {
+                        functions.logger.warn(`Redirect blocked from ${baseURL} to ${forwardedURL}`);
+                        redirectBlocked = true;
+                        return false;
+                    }
+                },
             });
+            // If we reach this point, it means the preview was successful
             functions.logger.info("Raw preview data:", JSON.stringify(preview, null, 2));
             const previewData = {
                 mediaType: preview.mediaType,
@@ -279,28 +268,71 @@ exports.fetchAndSaveLinkPreview = functions.firestore
         }
         catch (error) {
             functions.logger.error(`Error fetching link preview for ${linkId} (Attempt ${retryCount + 1}):`, error);
+            // Check if the error is related to a blocked redirect
+            if (error instanceof Error && error.message.includes("redirect")) {
+                functions.logger.warn(`Redirect error encountered: ${error.message}`);
+                redirectBlocked = true;
+            }
             retryCount++;
-            if (retryCount >= maxRetries) {
-                functions.logger.error(`Failed to fetch link preview for ${linkId} after ${maxRetries} attempts`);
-                // Save a minimal preview to avoid future retries
-                await admin
-                    .firestore()
-                    .collection("links")
-                    .doc(linkId)
-                    .update({
-                    preview: {
-                        title: linkData.url,
-                        mediaType: "text/html",
-                        contentType: "text/html",
-                    },
-                });
-                return null;
+            if (redirectBlocked || retryCount >= maxRetries) {
+                break;
             }
             // Wait before retrying (exponential backoff)
             await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, retryCount)));
         }
     }
-    // This line ensures that all code paths return a value
+    // If all retries failed or redirect was blocked, try YouTube API for YouTube URLs
+    if ((redirectBlocked || retryCount >= maxRetries) && (0, youtubeUtils_1.isYoutubeUrl)(linkData.url)) {
+        functions.logger.info(`Manual redirect failed for YouTube URL. Attempting YouTube Data API for ${linkData.url}`);
+        try {
+            const videoId = (0, youtubeUtils_1.getYoutubeVideoId)(linkData.url);
+            if (!videoId) {
+                functions.logger.error("No video ID found for YouTube link:", linkData.url);
+                return null;
+            }
+            const youtubeApiKey = functions.config().youtube.api_key;
+            const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
+            const response = await fetch(youtubeApiUrl);
+            const data = await response.json();
+            functions.logger.debug("YouTube API response:", JSON.stringify(data));
+            if (data.items && data.items.length > 0) {
+                const video = data.items[0];
+                const previewData = {
+                    title: video.snippet.title,
+                    description: video.snippet.description,
+                    image: video.snippet.thumbnails.high.url,
+                    mediaType: "video",
+                    contentType: "text/html",
+                };
+                await admin.firestore().collection("links").doc(linkId).update({
+                    preview: previewData,
+                });
+                functions.logger.info("YouTube link preview saved for:", linkId);
+                return null;
+            }
+            else {
+                functions.logger.error("No video found for YouTube link:", linkId);
+            }
+        }
+        catch (youtubeError) {
+            functions.logger.error("Error fetching YouTube data:", youtubeError);
+        }
+    }
+    // If all attempts failed, save a minimal preview
+    if (redirectBlocked || retryCount >= maxRetries) {
+        functions.logger.error(`Failed to fetch link preview for ${linkId} after ${retryCount} attempts`);
+        await admin
+            .firestore()
+            .collection("links")
+            .doc(linkId)
+            .update({
+            preview: {
+                title: linkData.url,
+                mediaType: "text/html",
+                contentType: "text/html",
+            },
+        });
+    }
     return null;
 });
 //# sourceMappingURL=index.js.map
