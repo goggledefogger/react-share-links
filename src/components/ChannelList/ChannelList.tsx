@@ -23,7 +23,7 @@ const CHANNELS_PER_PAGE = 20;
 
 const ChannelList: React.FC = () => {
   const navigate = useNavigate();
-  const { addChannel, deleteChannel, updateChannel } = useChannels();
+  const { addChannel, deleteChannel, updateChannel, getUsernameById } = useChannels();
   const { user, profile, loading: authLoading } = useAuthUser();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -31,6 +31,7 @@ const ChannelList: React.FC = () => {
     channelId: string | null;
   }>({ isOpen: false, channelId: null });
   const { showToast } = useToast();
+  const [creatorUsernames, setCreatorUsernames] = useState<Record<string, string>>({});
 
   const channelsConfig: QueryConfig = useMemo(
     () => ({
@@ -62,6 +63,27 @@ const ChannelList: React.FC = () => {
       return b.createdAt - a.createdAt;
     });
   }, [channels, profile?.subscribedChannels]);
+
+  useEffect(() => {
+    const fetchCreatorUsernames = async () => {
+      const newUsernames: Record<string, string> = {};
+      let hasNewUsernames = false;
+
+      for (const channel of sortedChannels) {
+        if (!creatorUsernames[channel.createdBy]) {
+          const username = await getUsernameById(channel.createdBy);
+          newUsernames[channel.createdBy] = username;
+          hasNewUsernames = true;
+        }
+      }
+
+      if (hasNewUsernames) {
+        setCreatorUsernames(prevUsernames => ({ ...prevUsernames, ...newUsernames }));
+      }
+    };
+
+    fetchCreatorUsernames();
+  }, [sortedChannels, getUsernameById]);
 
   const handleAddChannel = useCallback(
     async (formData: { [key: string]: string }) => {
@@ -237,7 +259,7 @@ const ChannelList: React.FC = () => {
                         channel.createdBy === user?.uid ? "current-user" : ""
                       }`}>
                       <FaUser className="icon" />{" "}
-                      {channel.creatorUsername || "Loading..."}
+                      {creatorUsernames[channel.createdBy] || "Loading..."}
                     </span>
                     <span
                       className={`channel-date ${
