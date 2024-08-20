@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, Reaction } from '../../types';
 import { useAuthUser } from '../../hooks/useAuthUser';
 import { useChannels } from '../../hooks/useChannels';
@@ -8,6 +8,7 @@ import LoadingSpinner from '../common/LoadingSpinner';
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from 'emoji-picker-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import './LinkItem.css';
+import Tooltip from '../common/Tooltip'; // You'll need to create this component
 
 interface LinkItemProps {
   link: Link;
@@ -84,6 +85,60 @@ const LinkItem: React.FC<LinkItemProps> = ({
     event.stopPropagation();
     setActiveEmojiPickerId(prevId => prevId === link.id ? null : link.id);
   };
+
+  const renderReaction = useCallback(async (reaction: Reaction, index: number) => {
+    const isCurrentUserReaction = reaction.userId === user?.uid;
+
+    let tooltipContent = '';
+    if (isCurrentUserReaction) {
+      tooltipContent = 'You';
+    } else {
+      const username = await getUsernameById(reaction.userId);
+      tooltipContent = username || 'Unknown user';
+    }
+
+    if (reaction.userIds && reaction.userIds.length > 1) {
+      const otherUsernames = await Promise.all(
+        reaction.userIds
+          .filter(id => id !== reaction.userId)
+          .map(getUsernameById)
+      );
+      const validUsernames = otherUsernames.filter(name => name);
+      if (validUsernames.length > 0) {
+        tooltipContent += ` and ${validUsernames.length} other${validUsernames.length > 1 ? 's' : ''}`;
+      }
+    }
+
+    return (
+      <Tooltip key={index} content={tooltipContent}>
+        <span
+          className={`reaction ${isCurrentUserReaction ? 'current-user-reaction' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isCurrentUserReaction) {
+              onRemoveReaction(link.id, reaction.emoji);
+            }
+          }}
+          style={{
+            cursor: isCurrentUserReaction ? 'pointer' : 'default',
+          }}
+        >
+          {reaction.emoji}
+        </span>
+      </Tooltip>
+    );
+  }, [user?.uid, getUsernameById, onRemoveReaction, link.id]);
+
+  // Use React.memo to optimize rendering of reactions
+  const MemoizedReaction = React.memo(({ reaction, index }: { reaction: Reaction, index: number }) => {
+    const [renderedReaction, setRenderedReaction] = useState<React.ReactElement | null>(null);
+
+    useEffect(() => {
+      renderReaction(reaction, index).then(setRenderedReaction);
+    }, [reaction, index]);
+
+    return renderedReaction;
+  });
 
   return (
     <div
@@ -183,27 +238,13 @@ const LinkItem: React.FC<LinkItemProps> = ({
           </span>
         </div>
         <div className="link-reactions">
-          {link.reactions &&
-            link.reactions.map((reaction: Reaction, index: number) => (
-              <span
-                key={index}
-                className="reaction"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (reaction.userId === user?.uid) {
-                    onRemoveReaction(link.id, reaction.emoji);
-                  }
-                }}
-                style={{
-                  cursor: reaction.userId === user?.uid ? 'pointer' : 'default',
-                }}>
-                {reaction.emoji}
-              </span>
-            ))}
+          {link.reactions && link.reactions.map((reaction, index) => (
+            <MemoizedReaction key={`${reaction.emoji}-${index}`} reaction={reaction} index={index} />
+          ))}
         </div>
       </div>
     </div>
   );
 };
 
-export default LinkItem;
+export default React.memo(LinkItem);

@@ -192,11 +192,10 @@
 .reaction {
   font-size: 1.2em;
   margin-left: 5px;
-  cursor: pointer;
   transition: transform 0.1s;
 }
 
-.reaction:hover {
+.reaction.current-user-reaction:hover {
   transform: scale(1.2);
 }
 
