@@ -19,6 +19,7 @@ import { FaMoon, FaSun, FaBars } from 'react-icons/fa';
 import './styles/variables.css';
 import './styles/animations.css';
 import './App.css';
+import MobileMenu from './components/MobileMenu/MobileMenu';
 
 const AppContent: React.FC = () => {
   const { user, profile, signOutUser, loading } = useAuthUser();
@@ -82,37 +83,14 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </header>
-      <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
-        <nav className="main-nav">
-          {user && (
-            <Link to="/" className="nav-link">
-              Channels
-            </Link>
-          )}
-        </nav>
-        <div className="user-actions">
-          {user ? (
-            <>
-              <Link to="/profile" className="welcome-message">
-                Welcome, {profile?.username || user.email}
-              </Link>
-              <button onClick={signOutUser} className="btn btn-primary">
-                Sign Out
-              </button>
-            </>
-          ) : (
-            <Link to="/login" className="btn btn-primary">
-              Sign In
-            </Link>
-          )}
-          <button
-            onClick={toggleTheme}
-            className="btn btn-icon"
-            title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}>
-            {theme === 'light' ? <FaMoon /> : <FaSun />}
-          </button>
-        </div>
-      </div>
+      <MobileMenu
+        isOpen={isMobileMenuOpen}
+        user={user}
+        profile={profile}
+        signOutUser={signOutUser}
+        theme={theme}
+        toggleTheme={toggleTheme}
+      />
       <main>
         <div className="container">
           <Routes>

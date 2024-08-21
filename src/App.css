@@ -289,49 +289,6 @@ select:focus-visible {
     cursor: pointer;
   }
 
-  .mobile-menu {
-    position: fixed;
-    top: var(--header-height);
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--surface-color);
-    z-index: var(--z-index-modal);
-    display: flex;
-    flex-direction: column;
-    padding: 1rem;
-    transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
-  }
-
-  .mobile-menu.open {
-    transform: translateX(0);
-  }
-
-  .mobile-menu .main-nav,
-  .mobile-menu .user-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .mobile-menu .nav-link,
-  .mobile-menu .welcome-message,
-  .mobile-menu .btn {
-    margin: 0.5rem 0;
-    width: 100%;
-    text-align: left;
-  }
-
-  .mobile-menu .btn {
-    padding: 0.75rem 1rem;
-  }
-
-  .mobile-menu .welcome-message {
-    font-size: 1rem;
-    padding: 0.75rem 0;
-  }
-
   main {
     padding: 1rem 0.5rem;
   }
@@ -342,8 +299,7 @@ select:focus-visible {
 }
 
 @media (min-width: 768px) {
-  .hamburger-menu,
-  .mobile-menu {
+  .hamburger-menu {
     display: none;
   }
 
