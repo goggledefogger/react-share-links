@@ -14,6 +14,7 @@
 }
 
 .profile-info p {
+  color: var(--text-color);
   margin-bottom: 0.5rem;
 }
 

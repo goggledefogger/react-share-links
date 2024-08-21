@@ -170,40 +170,8 @@ select:focus-visible {
 }
 
 /* Dark Mode Styles */
-.dark {
-  --input-bg-color: #3a3a3a;
-  --input-text-color: #e0e0e0;
-  --input-border-color: #555;
-  --input-focus-border-color: #7a7a7a;
-}
-
 .dark .logo {
   filter: invert(1) brightness(1.5);
-}
-
-.dark .profile-info p,
-.dark .channel-name,
-.dark .channel-meta,
-.dark .link-meta {
-  color: var(--input-text-color);
-}
-
-.dark .btn-primary {
-  background-color: var(--primary-color);
-  color: #ffffff;
-}
-
-.dark .btn-primary:hover {
-  background-color: var(--primary-dark);
-}
-
-.dark .btn-secondary {
-  background-color: var(--secondary-color);
-  color: #ffffff;
-}
-
-.dark .btn-secondary:hover {
-  background-color: var(--secondary-dark);
 }
 
 .dark .btn:hover {
@@ -211,7 +179,7 @@ select:focus-visible {
 }
 
 .dark .nav-link:hover {
-  background-color: var(--dark-surface-light);
+  background-color: var(--surface-light);
 }
 
 .dark .card:hover {
@@ -219,7 +187,7 @@ select:focus-visible {
 }
 
 .dark .list-item:hover {
-  background-color: var(--dark-surface-light);
+  background-color: var(--surface-light);
 }
 
 /* Responsive Styles */
