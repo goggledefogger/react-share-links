@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Form.css';
 
 interface FormField {
   name: string;
@@ -45,21 +46,22 @@ const Form: React.FC<FormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="form">
       {fields.map((field) => (
-        <input
-          key={field.name}
-          type={field.type}
-          name={field.name}
-          placeholder={field.placeholder}
-          value={formData[field.name] || ''}
-          onChange={handleInputChange}
-          required={field.required}
-          maxLength={field.maxLength}
-          className="input"
-        />
+        <div key={field.name} className="input-wrapper">
+          <input
+            type={field.type}
+            name={field.name}
+            placeholder={field.placeholder}
+            value={formData[field.name] || ''}
+            onChange={handleInputChange}
+            required={field.required}
+            maxLength={field.maxLength}
+            className="input"
+          />
+        </div>
       ))}
-      <button type="submit" className={submitButtonClass}>
+      <button type="submit" className={`btn ${submitButtonClass}`}>
         {submitButtonText}
       </button>
     </form>

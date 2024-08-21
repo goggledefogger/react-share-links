@@ -135,15 +135,24 @@
 
 .add-channel-form form {
   display: flex;
-  gap: 1rem;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.add-channel-form .input-wrapper {
+  flex: 1;
+  min-width: 0; /* This allows the input to shrink below its default minimum width */
+  margin-right: 1rem;
 }
 
 .add-channel-form .input {
-  flex-grow: 1;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .add-channel-form .btn {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  white-space: nowrap; /* Prevent button text from wrapping */
 }
 
 /* Dark theme adjustments */
