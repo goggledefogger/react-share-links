@@ -18,6 +18,7 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import { FaMoon, FaSun, FaBars } from 'react-icons/fa';
 import './styles/variables.css';
 import './styles/animations.css';
+import './styles/mobile.css';
 import './App.css';
 import MobileMenu from './components/MobileMenu/MobileMenu';
 
@@ -25,6 +26,10 @@ const AppContent: React.FC = () => {
   const { user, profile, signOutUser, loading } = useAuthUser();
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
 
   if (loading) {
     return (
@@ -90,6 +95,7 @@ const AppContent: React.FC = () => {
         signOutUser={signOutUser}
         theme={theme}
         toggleTheme={toggleTheme}
+        onClose={closeMobileMenu}
       />
       <main>
         <div className="container">

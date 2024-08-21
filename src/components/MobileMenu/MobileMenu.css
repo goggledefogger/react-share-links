@@ -11,6 +11,7 @@
   padding: 1.5rem;
   transform: translateX(-100%);
   transition: transform 0.3s ease-in-out;
+  overflow-y: auto;
 }
 
 .mobile-menu.open {
@@ -28,18 +29,26 @@
 .mobile-menu .welcome-message,
 .mobile-menu .btn {
   margin: 0.5rem 0;
-  width: auto;
+  width: 100%;
   text-align: left;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.mobile-menu .nav-link:hover,
+.mobile-menu .welcome-message:hover,
+.mobile-menu .btn:hover {
+  background-color: var(--surface-light);
 }
 
 .mobile-menu .btn {
-  padding: 0.5rem 1rem;
-  align-self: flex-start;
+  text-align: center;
 }
 
 .mobile-menu .welcome-message {
   font-size: 1rem;
-  padding: 0.5rem 0;
+  font-weight: 500;
 }
 
 .mobile-menu .user-actions {
@@ -60,4 +69,10 @@
 /* Dark theme adjustments */
 .dark .mobile-menu {
   background-color: var(--dark-surface-color);
+}
+
+.dark .mobile-menu .nav-link:hover,
+.dark .mobile-menu .welcome-message:hover,
+.dark .mobile-menu .btn:hover {
+  background-color: var(--dark-surface-light);
 }

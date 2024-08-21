@@ -10,6 +10,7 @@ interface MobileMenuProps {
   signOutUser: () => void;
   theme: string;
   toggleTheme: () => void;
+  onClose: () => void;
 }
 
 const MobileMenu: React.FC<MobileMenuProps> = ({
@@ -19,12 +20,22 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   signOutUser,
   theme,
   toggleTheme,
+  onClose,
 }) => {
+  const handleLinkClick = () => {
+    onClose();
+  };
+
+  const handleSignOut = () => {
+    signOutUser();
+    onClose();
+  };
+
   return (
     <div className={`mobile-menu ${isOpen ? 'open' : ''}`}>
       <nav className="main-nav">
         {user && (
-          <Link to="/" className="nav-link">
+          <Link to="/" className="nav-link" onClick={handleLinkClick}>
             Channels
           </Link>
         )}
@@ -32,15 +43,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       <div className="user-actions">
         {user ? (
           <>
-            <Link to="/profile" className="welcome-message">
+            <Link to="/profile" className="welcome-message" onClick={handleLinkClick}>
               Welcome, {profile?.username || user.email}
             </Link>
-            <button onClick={signOutUser} className="btn btn-primary">
+            <button onClick={handleSignOut} className="btn btn-primary">
               Sign Out
             </button>
           </>
         ) : (
-          <Link to="/login" className="btn btn-primary">
+          <Link to="/login" className="btn btn-primary" onClick={handleLinkClick}>
             Sign In
           </Link>
         )}
