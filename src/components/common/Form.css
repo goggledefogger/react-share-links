@@ -7,7 +7,10 @@
 .input-wrapper {
   flex: 1;
   min-width: 0; /* This allows the input to shrink below its default minimum width */
-  margin-right: 1rem;
+}
+
+.input-wrapper:not(:last-child) {
+  margin-right: 1rem; /* Apply margin to all input wrappers except the last one */
 }
 
 .input {
@@ -85,7 +88,8 @@
     flex-direction: column;
   }
 
-  .input-wrapper {
+  .input-wrapper,
+  .input-wrapper:not(:last-child) {
     margin-right: 0;
     margin-bottom: 0.5rem;
   }

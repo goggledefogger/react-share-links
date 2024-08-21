@@ -133,23 +133,6 @@
   margin-bottom: 1rem;
 }
 
-.add-channel-form form {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-}
-
-.add-channel-form .input-wrapper {
-  flex: 1;
-  min-width: 0; /* This allows the input to shrink below its default minimum width */
-  margin-right: 1rem;
-}
-
-.add-channel-form .input {
-  width: 100%;
-  box-sizing: border-box;
-}
-
 .add-channel-form .btn {
   flex: 0 0 auto;
   white-space: nowrap; /* Prevent button text from wrapping */
@@ -201,15 +184,5 @@
 
   .add-channel-form {
     padding: 1rem;
-  }
-
-  .add-channel-form form {
-    flex-direction: column;
-  }
-
-  .add-channel-form .input,
-  .add-channel-form .btn {
-    width: 100%;
-    margin-top: 0.5rem;
   }
 }
