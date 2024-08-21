@@ -159,25 +159,48 @@
   border-left-color: var(--dark-primary-color, #3a6ea5);
 }
 
-@media (max-width: 768px) {
-  .channel-meta {
+@media (max-width: 767px) {
+  .channel-list {
+    max-width: 100%;
+    margin: 0;
+    padding: 1rem;
+  }
+
+  .channel-item {
+    padding: 0.75rem;
+  }
+
+  .channel-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .channel-name {
+    margin-bottom: 0.5rem;
+  }
+
+  .channel-meta {
+    flex-wrap: wrap;
   }
 
   .channel-creator,
   .channel-date,
   .channel-link-count {
-    margin-right: 0;
+    margin-right: 10px;
     margin-bottom: 5px;
+  }
+
+  .add-channel-form {
+    padding: 1rem;
   }
 
   .add-channel-form form {
     flex-direction: column;
   }
 
+  .add-channel-form .input,
   .add-channel-form .btn {
     width: 100%;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
   }
 }

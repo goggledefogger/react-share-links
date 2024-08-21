@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BrowserRouter as Router,
   Route,
@@ -15,7 +15,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import Toast from './components/Toast/Toast';
 import LoadingSpinner from './components/common/LoadingSpinner';
-import { FaMoon, FaSun } from 'react-icons/fa';
+import { FaMoon, FaSun, FaBars } from 'react-icons/fa';
 import './styles/variables.css';
 import './styles/animations.css';
 import './App.css';
@@ -23,6 +23,7 @@ import './App.css';
 const AppContent: React.FC = () => {
   const { user, profile, signOutUser, loading } = useAuthUser();
   const { theme, toggleTheme } = useTheme();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (loading) {
     return (
@@ -44,6 +45,12 @@ const AppContent: React.FC = () => {
             />
             <h1>Share Links</h1>
           </Link>
+          <button
+            className="hamburger-menu"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <FaBars />
+          </button>
           <nav className="main-nav">
             {user && (
               <Link to="/" className="nav-link">
@@ -75,6 +82,37 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </header>
+      <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
+        <nav className="main-nav">
+          {user && (
+            <Link to="/" className="nav-link">
+              Channels
+            </Link>
+          )}
+        </nav>
+        <div className="user-actions">
+          {user ? (
+            <>
+              <Link to="/profile" className="welcome-message">
+                Welcome, {profile?.username || user.email}
+              </Link>
+              <button onClick={signOutUser} className="btn btn-primary">
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <Link to="/login" className="btn btn-primary">
+              Sign In
+            </Link>
+          )}
+          <button
+            onClick={toggleTheme}
+            className="btn btn-icon"
+            title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}>
+            {theme === 'light' ? <FaMoon /> : <FaSun />}
+          </button>
+        </div>
+      </div>
       <main>
         <div className="container">
           <Routes>
