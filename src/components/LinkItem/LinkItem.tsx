@@ -153,9 +153,12 @@ const LinkItem: React.FC<LinkItemProps> = ({
         handleCardClick(e as unknown as React.MouseEvent<HTMLDivElement>)
       }>
       <div className="link-card-header">
-        <span className="link-url">
-          <FaLink className="icon" aria-hidden="true" /> {link.url}
-        </span>
+        <div className="link-url-container">
+          {link.preview?.favicon && <img src={link.preview.favicon} alt="Favicon" className="link-favicon" />}
+          <a href={link.url} className="link-url" target="_blank" rel="noopener noreferrer">
+            {link.url}
+          </a>
+        </div>
         <div className="link-actions">
           <div className="emoji-button-container">
             <button
@@ -205,6 +208,10 @@ const LinkItem: React.FC<LinkItemProps> = ({
           </div>
         ) : link.preview ? (
           <div className="link-preview">
+            <div className="link-metadata">
+              <h3 className="link-title">{link.preview.title}</h3>
+              <p className="link-description">{link.preview.description}</p>
+            </div>
             {link.preview.image && (
               <img
                 src={link.preview.image}
@@ -212,17 +219,6 @@ const LinkItem: React.FC<LinkItemProps> = ({
                 className="link-thumbnail"
               />
             )}
-            <div className="link-metadata">
-              <h3 className="link-title">{link.preview.title}</h3>
-              <p className="link-description">{link.preview.description}</p>
-              {link.preview.favicon && (
-                <img
-                  src={link.preview.favicon}
-                  alt="Favicon"
-                  className="link-favicon"
-                />
-              )}
-            </div>
           </div>
         ) : (
           <div className="link-preview-unavailable">Preview not available</div>
