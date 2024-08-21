@@ -290,11 +290,11 @@ select:focus-visible {
   }
 
   main {
-    padding: 1rem 0.5rem;
+    padding: 0;
   }
 
   .container {
-    padding: 1rem;
+    padding: 0;
   }
 }
 

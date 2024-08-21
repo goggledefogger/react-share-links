@@ -167,7 +167,7 @@
 
 /* Dark theme adjustments */
 .dark .channel-view {
-  background-color: var(--dark-surface-color);
+  background-color: var(--background-color);
 }
 
 .dark .add-link-form {
