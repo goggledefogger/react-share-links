@@ -34,10 +34,8 @@ interface Link {
 
 const LINK_PREVIEW_TIMEOUT = 10000; // 10 seconds
 
-const apiKey =
-  process.env.MJ_APIKEY_PUBLIC || functions.config().mailjet?.api_key;
-const apiSecret =
-  process.env.MJ_APIKEY_PRIVATE || functions.config().mailjet?.api_secret;
+const apiKey = functions.config().mailjet.api_key;
+const apiSecret = functions.config().mailjet.api_secret;
 
 const mailjet = new Client({
   apiKey: apiKey,
@@ -183,8 +181,7 @@ async function sendDigest(frequency: string, daysAgo: number) {
             digestContent: digestContent,
           };
 
-          const templateId = process.env.MJ_DIGEST_TEMPLATE_ID ||
-            functions.config().mailjet.digest_email_template_id;
+          const templateId = functions.config().mailjet.digest_email_template_id;
           await sendEmail(
             user.email,
             user.username || "User",
@@ -251,8 +248,7 @@ export const sendNewLinkNotification = functions.firestore
           linkImage: newLink.preview?.image || "",
         };
 
-        const templateId = process.env.MJ_NEW_LINK_TEMPLATE_ID ||
-          functions.config().mailjet.new_link_email_template_id;
+        const templateId = functions.config().mailjet.new_link_email_template_id;
         // Send email using Mailjet template
         await sendEmail(
           user.email,

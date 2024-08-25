@@ -1,10 +1,12 @@
 {
   "mailjet": {
-    "api_key": "TEST_KEY",
-    "api_secret": "TEST_SECRET",
-    "digest_email_template_id": "1234567890"
+    "api_key": "YOUR_MAILJET_API_KEY",
+    "api_secret": "YOUR_MAILJET_API_SECRET",
+    "test_template_id": "YOUR_TEST_TEMPLATE_ID",
+    "digest_email_template_id": "YOUR_DIGEST_TEMPLATE_ID",
+    "new_link_email_template_id": "YOUR_NEW_LINK_TEMPLATE_ID"
   },
   "youtube": {
-    "api_key": "YOUTUBE_API_KEY"
+    "api_key": "YOUR_YOUTUBE_API_KEY"
   }
 }
