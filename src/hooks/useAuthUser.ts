@@ -39,6 +39,7 @@ export function useAuthUser() {
               email: user.email || '',
               digestFrequency: 'none',
               subscribedChannels: [],
+              emailNotifications: true, // Add this line
             };
             await setDoc(doc(db, 'users', user.uid), defaultProfile);
             setAuthUser({
@@ -88,29 +89,16 @@ export function useAuthUser() {
     }
   };
 
-  const updateUserProfile = async (newProfile: Partial<UserProfile>) => {
-    if (!authUser.user) {
-      throw new Error('No user logged in');
-    }
-
+  const updateUserProfile = async (userId: string, updatedProfile: Partial<UserProfile>) => {
     try {
-      const userRef = doc(db, 'users', authUser.user.uid);
-      await updateDoc(userRef, newProfile);
-
-      if (newProfile.username) {
-        await updateProfile(authUser.user, {
-          displayName: newProfile.username,
-        });
-      }
-
-      // Update local state
+      await updateDoc(doc(db, "users", userId), updatedProfile);
       setAuthUser((prev) => ({
         ...prev,
-        profile: { ...prev.profile, ...newProfile } as UserProfile,
+        profile: { ...prev.profile, ...updatedProfile } as UserProfile,
       }));
     } catch (error) {
-      console.error('Error updating user profile:', error);
-      throw new Error('Failed to update user profile');
+      console.error("Error updating user profile:", error);
+      throw error;
     }
   };
 

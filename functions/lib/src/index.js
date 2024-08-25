@@ -1,7 +1,7 @@
 "use strict";
 var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendEmail = exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
+exports.sendEmail = exports.sendNewLinkNotification = exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const node_mailjet_1 = require("node-mailjet");
@@ -15,32 +15,45 @@ const mailjet = new node_mailjet_1.Client({
     apiKey: apiKey,
     apiSecret: apiSecret,
 });
-async function sendEmail(userEmail, userName, subject, htmlContent) {
-    const senderEmail = process.env.MJ_SENDER_EMAIL || functions.config().mailjet.sender_email;
+async function sendEmail(userEmail, userName, subject, templateContent, templateId) {
+    if (!templateId) {
+        console.error("Mailjet template ID is not provided");
+        throw new functions.https.HttpsError("failed-precondition", "Email template ID is not provided");
+    }
     try {
-        await mailjet.post("send", { version: "v3.1" }).request({
+        console.log(`Attempting to send email to ${userEmail} with subject: ${subject}`);
+        console.log("Template ID:", templateId);
+        console.log("Template content:", JSON.stringify(templateContent, null, 2));
+        const response = await mailjet.post("send", { version: "v3.1" }).request({
             Messages: [
                 {
-                    From: {
-                        Email: senderEmail,
-                        Name: "Share Links Digest",
-                    },
                     To: [
                         {
                             Email: userEmail,
                             Name: userName,
                         },
                     ],
+                    TemplateID: parseInt(templateId),
+                    TemplateLanguage: true,
                     Subject: subject,
-                    HTMLPart: htmlContent,
+                    Variables: templateContent,
                 },
             ],
         });
         console.log(`Email sent successfully to ${userEmail}`);
+        console.log("Mailjet API response:", JSON.stringify(response.body, null, 2));
         return { success: true };
     }
     catch (error) {
         console.error(`Error sending email to ${userEmail}:`, error);
+        if (error instanceof Error) {
+            console.error("Error message:", error.message);
+            console.error("Error stack:", error.stack);
+        }
+        if (typeof error === "object" && error !== null && "response" in error) {
+            const mailjetError = error;
+            console.error("Mailjet API error response:", JSON.stringify(mailjetError.response.body, null, 2));
+        }
         throw new functions.https.HttpsError("internal", `Failed to send email to ${userEmail}`);
     }
 }
@@ -61,58 +74,39 @@ async function generateDigestContent(userId, daysAgo) {
         const subscribedChannels = user.subscribedChannels || [];
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
-        let digestContent = "";
+        const digestContent = [];
         for (const channelId of subscribedChannels) {
-            try {
-                const linksSnapshot = await admin
+            const linksSnapshot = await admin
+                .firestore()
+                .collection("links")
+                .where("channelId", "==", channelId)
+                .where("createdAt", ">=", cutoffDate)
+                .orderBy("createdAt", "desc")
+                .get();
+            if (!linksSnapshot.empty) {
+                const channelDoc = await admin
                     .firestore()
-                    .collection("links")
-                    .where("channelId", "==", channelId)
-                    .where("createdAt", ">=", cutoffDate)
-                    .orderBy("createdAt", "desc")
-                    .limit(5)
+                    .collection("channels")
+                    .doc(channelId)
                     .get();
-                if (!linksSnapshot.empty) {
-                    const channelDoc = await admin
-                        .firestore()
-                        .collection("channels")
-                        .doc(channelId)
-                        .get();
-                    const channelName = ((_a = channelDoc.data()) === null || _a === void 0 ? void 0 : _a.name) || "Unknown Channel";
-                    digestContent += `
-            <h2 style="color: #5b8cb7; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
-              ${channelName}
-            </h2>
-          `;
-                    linksSnapshot.forEach((linkDoc) => {
-                        var _a, _b, _c;
-                        const link = linkDoc.data();
-                        const title = ((_a = link.preview) === null || _a === void 0 ? void 0 : _a.title) || link.url;
-                        const image = ((_b = link.preview) === null || _b === void 0 ? void 0 : _b.image) ?
-                            `<img src="${link.preview.image}" alt="Preview"
-                  style="max-width: 100%; height: auto; margin-bottom: 10px;">` :
-                            "";
-                        const description = ((_c = link.preview) === null || _c === void 0 ? void 0 : _c.description) || "";
-                        digestContent += `
-              <div style="margin-bottom: 20px; background-color: #f9f9f9;
-                  padding: 15px; border-radius: 5px;">
-                <h3 style="margin-top: 0;">
-                  <a href="${link.url}" style="color: #3a6ea5; text-decoration: none;">
-                    ${title}
-                  </a>
-                </h3>
-                ${image}
-                <p style="color: #666; margin-bottom: 0;">${description}</p>
-              </div>
-            `;
-                    });
-                }
-            }
-            catch (error) {
-                console.error(`Error processing channel ${channelId}:`, error);
+                const channelName = ((_a = channelDoc.data()) === null || _a === void 0 ? void 0 : _a.name) || "Unknown Channel";
+                const channelLinks = linksSnapshot.docs.map((linkDoc) => {
+                    var _a, _b, _c;
+                    const link = linkDoc.data();
+                    return {
+                        url: link.url,
+                        title: ((_a = link.preview) === null || _a === void 0 ? void 0 : _a.title) || link.url,
+                        description: ((_b = link.preview) === null || _b === void 0 ? void 0 : _b.description) || "",
+                        image: ((_c = link.preview) === null || _c === void 0 ? void 0 : _c.image) || "",
+                    };
+                });
+                digestContent.push({
+                    channelName,
+                    links: channelLinks,
+                });
             }
         }
-        return digestContent;
+        return digestContent.length > 0 ? digestContent : null;
     }
     catch (error) {
         console.error(`Error generating digest content for userId ${userId}:`, error);
@@ -133,29 +127,13 @@ async function sendDigest(frequency, daysAgo) {
             try {
                 const digestContent = await generateDigestContent(userId, daysAgo);
                 if (digestContent) {
-                    const htmlContent = `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>${frequency === "weekly" ? "Weekly" : "Daily"} Share Links Digest</title>
-            </head>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;
-                max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h1 style="color: #5b8cb7;">
-                Your ${frequency === "weekly" ? "Weekly" : "Daily"} Share Links Digest
-              </h1>
-              ${digestContent}
-              <p style="margin-top: 30px; font-size: 0.9em; color: #888;">
-                You're receiving this email because you've subscribed to
-                ${frequency === "weekly" ? "weekly" : "daily"} digests from Share Links.
-                <a href="#" style="color: #5b8cb7;">Manage your preferences</a>
-              </p>
-            </body>
-            </html>
-          `;
-                    await sendEmail(user.email, user.username || "User", `Your ${frequency === "weekly" ? "Weekly" : "Daily"} Share Links Digest`, htmlContent);
+                    const templateContent = {
+                        frequency: frequency === "weekly" ? "Weekly" : "Daily",
+                        digestContent: digestContent,
+                    };
+                    const templateId = process.env.MJ_DIGEST_TEMPLATE_ID ||
+                        functions.config().mailjet.digest_email_template_id;
+                    await sendEmail(user.email, user.username || "User", `Your ${frequency === "weekly" ? "Weekly" : "Daily"} Share Links Digest`, templateContent, templateId);
                     console.log(`Digest sent successfully to user ${userId}`);
                 }
                 else {
@@ -163,15 +141,12 @@ async function sendDigest(frequency, daysAgo) {
                 }
             }
             catch (error) {
-                console.error(`Error processing digest for user ${userId}:`, error);
+                console.error(`Error sending digest to user ${userId}:`, error);
             }
         }
-        console.log(`Finished sending ${frequency} digests`);
-        return null;
     }
     catch (error) {
-        console.error(`Error in sendDigest function for ${frequency} digest:`, error);
-        throw new functions.https.HttpsError("internal", `Failed to send ${frequency} digests`);
+        console.error(`Error sending ${frequency} digest:`, error);
     }
 }
 exports.sendWeeklyDigest = functions.pubsub
@@ -187,6 +162,41 @@ exports.sendDailyDigest = functions.pubsub
     .onRun(async () => {
     console.log("Starting daily digest");
     return sendDigest("daily", 1);
+});
+exports.sendNewLinkNotification = functions.firestore
+    .document("links/{linkId}")
+    .onCreate(async (snapshot) => {
+    var _a, _b, _c, _d;
+    const newLink = snapshot.data();
+    const channelId = newLink.channelId;
+    // Get all users subscribed to this channel
+    const usersSnapshot = await admin.firestore()
+        .collection("users")
+        .where("subscribedChannels", "array-contains", channelId)
+        .get();
+    const channelSnapshot = await admin.firestore()
+        .collection("channels")
+        .doc(channelId)
+        .get();
+    const channelName = channelSnapshot.exists ? (_a = channelSnapshot.data()) === null || _a === void 0 ? void 0 : _a.name : "Unknown Channel";
+    for (const userDoc of usersSnapshot.docs) {
+        const user = userDoc.data();
+        if (user.email && user.emailNotifications !== false) {
+            // Prepare the content for the Mailjet template
+            const templateContent = {
+                channelName: channelName,
+                linkUrl: newLink.url,
+                linkTitle: ((_b = newLink.preview) === null || _b === void 0 ? void 0 : _b.title) || newLink.url,
+                linkDescription: ((_c = newLink.preview) === null || _c === void 0 ? void 0 : _c.description) || "",
+                linkImage: ((_d = newLink.preview) === null || _d === void 0 ? void 0 : _d.image) || "",
+            };
+            const templateId = process.env.MJ_NEW_LINK_TEMPLATE_ID ||
+                functions.config().mailjet.new_link_email_template_id;
+            // Send email using Mailjet template
+            await sendEmail(user.email, user.username || "User", `New Link in ${channelName}`, templateContent, templateId);
+            console.log(`Notification sent to ${user.email} for new link in ${channelName}`);
+        }
+    }
 });
 exports.fetchAndSaveLinkPreview = functions.firestore
     .document("links/{linkId}")

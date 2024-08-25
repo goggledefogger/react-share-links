@@ -13,7 +13,6 @@ describe("Cloud Functions", () => {
         // Log the environment variables to verify they're loaded
         console.log("MJ_APIKEY_PUBLIC:", process.env.MJ_APIKEY_PUBLIC);
         console.log("MJ_APIKEY_PRIVATE:", process.env.MJ_APIKEY_PRIVATE);
-        console.log("MJ_SENDER_EMAIL:", process.env.MJ_SENDER_EMAIL);
     });
     afterAll(() => {
         testEnv.cleanup();
@@ -23,9 +22,13 @@ describe("Cloud Functions", () => {
             const testEmail = "dannybauman@gmail.com";
             const testName = "Test User";
             const subject = "Test Email from Firebase Function";
-            const htmlContent = "<h1>This is a test email sent from a Firebase Function using Mailjet.</h1>";
+            const templateContent = {
+                heading: "This is a test email sent from a Firebase Function using Mailjet.",
+                content: "This is the content of the test email.",
+            };
+            const templateId = process.env.MJ_TEST_TEMPLATE_ID || "your_test_template_id";
             try {
-                const result = await myFunctions.sendEmail(testEmail, testName, subject, htmlContent);
+                const result = await myFunctions.sendEmail(testEmail, testName, subject, templateContent, templateId);
                 expect(result).toEqual({ success: true });
             }
             catch (error) {
@@ -34,7 +37,12 @@ describe("Cloud Functions", () => {
         }, 30000); // Increase timeout to 30 seconds as API calls might take longer
         it("should throw an error for invalid email", async () => {
             const invalidEmail = "invalid-email";
-            await expect(myFunctions.sendEmail(invalidEmail, "Test User", "Test Subject", "<p>Test Content</p>")).rejects.toThrow(functions.https.HttpsError);
+            const templateContent = {
+                heading: "Test Subject",
+                content: "Test Content",
+            };
+            const templateId = process.env.MJ_TEST_TEMPLATE_ID || "your_test_template_id";
+            await expect(myFunctions.sendEmail(invalidEmail, "Test User", "Test Subject", templateContent, templateId)).rejects.toThrow(functions.https.HttpsError);
         });
     });
 });

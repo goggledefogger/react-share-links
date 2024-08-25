@@ -9,6 +9,7 @@ export interface UserProfile {
   email: string;
   digestFrequency: 'daily' | 'weekly' | 'none';
   subscribedChannels: string[];
+  emailNotifications: boolean;
 }
 
 export interface Reaction {
