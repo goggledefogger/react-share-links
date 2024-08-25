@@ -1,5 +1,4 @@
 "use strict";
-var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = exports.sendNewLinkNotification = exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
 const functions = require("firebase-functions");
@@ -9,8 +8,8 @@ const link_preview_js_1 = require("link-preview-js");
 const youtubeUtils_1 = require("./utils/youtubeUtils");
 admin.initializeApp();
 const LINK_PREVIEW_TIMEOUT = 10000; // 10 seconds
-const apiKey = process.env.MJ_APIKEY_PUBLIC || ((_a = functions.config().mailjet) === null || _a === void 0 ? void 0 : _a.api_key);
-const apiSecret = process.env.MJ_APIKEY_PRIVATE || ((_b = functions.config().mailjet) === null || _b === void 0 ? void 0 : _b.api_secret);
+const apiKey = functions.config().mailjet.api_key;
+const apiSecret = functions.config().mailjet.api_secret;
 const mailjet = new node_mailjet_1.Client({
     apiKey: apiKey,
     apiSecret: apiSecret,
@@ -131,8 +130,7 @@ async function sendDigest(frequency, daysAgo) {
                         frequency: frequency === "weekly" ? "Weekly" : "Daily",
                         digestContent: digestContent,
                     };
-                    const templateId = process.env.MJ_DIGEST_TEMPLATE_ID ||
-                        functions.config().mailjet.digest_email_template_id;
+                    const templateId = functions.config().mailjet.digest_email_template_id;
                     await sendEmail(user.email, user.username || "User", `Your ${frequency === "weekly" ? "Weekly" : "Daily"} Share Links Digest`, templateContent, templateId);
                     console.log(`Digest sent successfully to user ${userId}`);
                 }
@@ -190,8 +188,7 @@ exports.sendNewLinkNotification = functions.firestore
                 linkDescription: ((_c = newLink.preview) === null || _c === void 0 ? void 0 : _c.description) || "",
                 linkImage: ((_d = newLink.preview) === null || _d === void 0 ? void 0 : _d.image) || "",
             };
-            const templateId = process.env.MJ_NEW_LINK_TEMPLATE_ID ||
-                functions.config().mailjet.new_link_email_template_id;
+            const templateId = functions.config().mailjet.new_link_email_template_id;
             // Send email using Mailjet template
             await sendEmail(user.email, user.username || "User", `New Link in ${channelName}`, templateContent, templateId);
             console.log(`Notification sent to ${user.email} for new link in ${channelName}`);
