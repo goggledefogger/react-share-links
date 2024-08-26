@@ -32,6 +32,10 @@ async function sendEmail(userEmail, userName, subject, templateContent, template
                             Name: userName,
                         },
                     ],
+                    From: {
+                        Email: "ShareLinksInfo@towntowntown.com",
+                        Name: "Share Links Info",
+                    },
                     TemplateID: parseInt(templateId),
                     TemplateLanguage: true,
                     Subject: subject,
@@ -39,9 +43,21 @@ async function sendEmail(userEmail, userName, subject, templateContent, template
                 },
             ],
         });
-        console.log(`Email sent successfully to ${userEmail}`);
         console.log("Mailjet API response:", JSON.stringify(response.body, null, 2));
-        return { success: true };
+        // check the response to see if it was successful
+        if (response.body.Messages &&
+            response.body.Messages[0].Status === "success") {
+            console.log("Email sent successfully");
+            console.log("Message ID:", response.body.Messages[0].To[0].MessageID);
+            return { success: true };
+        }
+        else {
+            console.log("Email sending failed");
+            if (response.body.Messages && response.body.Messages[0].Errors) {
+                console.log("Error:", response.body.Messages[0].Errors[0].ErrorMessage);
+            }
+            return { success: false };
+        }
     }
     catch (error) {
         console.error(`Error sending email to ${userEmail}:`, error);
@@ -71,6 +87,8 @@ async function generateDigestContent(userId, daysAgo) {
             return "";
         }
         const subscribedChannels = user.subscribedChannels || [];
+        // log subscribed channels
+        console.log("Subscribed channels:", subscribedChannels);
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
         const digestContent = [];
@@ -83,6 +101,7 @@ async function generateDigestContent(userId, daysAgo) {
                 .orderBy("createdAt", "desc")
                 .get();
             if (!linksSnapshot.empty) {
+                console.log("Links snapshot:", linksSnapshot);
                 const channelDoc = await admin
                     .firestore()
                     .collection("channels")
@@ -92,6 +111,7 @@ async function generateDigestContent(userId, daysAgo) {
                 const channelLinks = linksSnapshot.docs.map((linkDoc) => {
                     var _a, _b, _c;
                     const link = linkDoc.data();
+                    console.log("Link:", link);
                     return {
                         url: link.url,
                         title: ((_a = link.preview) === null || _a === void 0 ? void 0 : _a.title) || link.url,
@@ -103,6 +123,7 @@ async function generateDigestContent(userId, daysAgo) {
                     channelName,
                     links: channelLinks,
                 });
+                console.log("Digest content:", digestContent);
             }
         }
         return digestContent.length > 0 ? digestContent : null;
