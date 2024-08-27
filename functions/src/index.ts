@@ -329,6 +329,13 @@ exports.fetchAndSaveLinkPreview = functions.firestore
       return null;
     }
 
+    // Check if it's a YouTube URL first
+    if (isYoutubeUrl(linkData.url)) {
+      functions.logger.info(`YouTube URL detected: ${linkData.url}`);
+      return await handleYoutubeLink(linkId, linkData.url);
+    }
+
+    // If not a YouTube URL, proceed with the existing link preview logic
     const maxRetries = 3;
     let retryCount = 0;
     let redirectBlocked = false;
@@ -449,52 +456,6 @@ exports.fetchAndSaveLinkPreview = functions.firestore
       }
     }
 
-    // If all retries failed or redirect was blocked, try YouTube API for YouTube URLs
-    if ((redirectBlocked || retryCount >= maxRetries) && isYoutubeUrl(linkData.url)) {
-      functions.logger.info(
-        `Manual redirect failed for YouTube URL. Attempting YouTube Data API for ${linkData.url}`
-      );
-
-      try {
-        const videoId = getYoutubeVideoId(linkData.url);
-        if (!videoId) {
-          functions.logger.error(
-            "No video ID found for YouTube link:",
-            linkData.url
-          );
-          return null;
-        }
-
-        const youtubeApiKey = functions.config().youtube.api_key;
-        const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
-        const response = await fetch(youtubeApiUrl);
-        const data = await response.json();
-        functions.logger.debug("YouTube API response:", JSON.stringify(data));
-
-        if (data.items && data.items.length > 0) {
-          const video = data.items[0];
-          const previewData: Partial<LinkPreview> = {
-            title: video.snippet.title,
-            description: video.snippet.description,
-            image: video.snippet.thumbnails.high.url,
-            mediaType: "video",
-            contentType: "text/html",
-          };
-
-          await admin.firestore().collection("links").doc(linkId).update({
-            preview: previewData,
-          });
-
-          functions.logger.info("YouTube link preview saved for:", linkId);
-          return null;
-        } else {
-          functions.logger.error("No video found for YouTube link:", linkId);
-        }
-      } catch (youtubeError) {
-        functions.logger.error("Error fetching YouTube data:", youtubeError);
-      }
-    }
-
     // If all attempts failed, save a minimal preview
     if (redirectBlocked || retryCount >= maxRetries) {
       functions.logger.error(
@@ -515,5 +476,54 @@ exports.fetchAndSaveLinkPreview = functions.firestore
 
     return null;
   });
+
+async function handleYoutubeLink(linkId: string, url: string) {
+  try {
+    const videoId = getYoutubeVideoId(url);
+    if (!videoId) {
+      functions.logger.error("No video ID found for YouTube link:", url);
+      return null;
+    }
+
+    const youtubeApiKey = functions.config().youtube.api_key;
+    const youtubeApiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${youtubeApiKey}`; // eslint-disable-line
+    const response = await fetch(youtubeApiUrl);
+    const data = await response.json();
+    functions.logger.debug("YouTube API response:", JSON.stringify(data));
+
+    if (data.items && data.items.length > 0) {
+      const video = data.items[0];
+      const previewData: Partial<LinkPreview> = {
+        title: video.snippet.title,
+        description: video.snippet.description,
+        image: video.snippet.thumbnails.high.url,
+        mediaType: "video",
+        contentType: "text/html",
+      };
+
+      await admin.firestore().collection("links").doc(linkId).update({
+        preview: previewData,
+      });
+
+      functions.logger.info("YouTube link preview saved for:", linkId);
+      return null;
+    } else {
+      functions.logger.error("No video found for YouTube link:", linkId);
+    }
+  } catch (youtubeError) {
+    functions.logger.error("Error fetching YouTube data:", youtubeError);
+  }
+
+  // If YouTube API fails, fall back to minimal preview
+  await admin.firestore().collection("links").doc(linkId).update({
+    preview: {
+      title: url,
+      mediaType: "text/html",
+      contentType: "text/html",
+    },
+  });
+
+  return null;
+}
 
 export { sendEmail };

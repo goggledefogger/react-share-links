@@ -2,14 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isYoutubeUrl = exports.getYoutubeVideoId = void 0;
 function getYoutubeVideoId(url) {
-    const regex = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
-    const match = url.match(regex);
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i; //eslint-disable-line
+    const match = url.match(youtubeRegex);
     return match ? match[1] : null;
 }
 exports.getYoutubeVideoId = getYoutubeVideoId;
 function isYoutubeUrl(url) {
-    // if the linkData.url is from either youtube.com or youtu.be, case insensitive
-    const youtubeRegex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/i;
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/i;
     return youtubeRegex.test(url);
 }
 exports.isYoutubeUrl = isYoutubeUrl;
