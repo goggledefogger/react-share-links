@@ -66,8 +66,7 @@ An application for sharing links. Simple and sweet, don't worry about comments.
      {
        "mailjet": {
          "api_key": "your_mailjet_api_key",
-         "api_secret": "your_mailjet_api_secret",
-         "sender_email": "your_sender_email@example.com"
+         "api_secret": "your_mailjet_api_secret"
        },
        "youtube": {
          "api_key": "your_youtube_data_api_key"

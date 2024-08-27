@@ -19,6 +19,7 @@ const UserProfile: React.FC = () => {
     'daily' | 'weekly' | 'none'
   >('none');
   const [subscribedChannels, setSubscribedChannels] = useState<string[]>([]);
+  const [emailNotifications, setEmailNotifications] = useState(localProfile?.emailNotifications ?? true);
 
   useEffect(() => {
     if (profile) {
@@ -28,10 +29,16 @@ const UserProfile: React.FC = () => {
     }
   }, [profile]);
 
-  const handleSubmit = async (updatedProfile: UserProfileType) => {
+  const handleSubmit = async (updatedProfile: Partial<UserProfileType>) => {
+    if (!user) return;
     try {
-      await updateUserProfile(updatedProfile);
-      setLocalProfile(updatedProfile);
+      await updateUserProfile(user.uid, {
+        ...updatedProfile,
+        emailNotifications,
+        digestFrequency,
+        subscribedChannels,
+      });
+      setLocalProfile((prev) => ({ ...prev, ...updatedProfile } as UserProfileType));
       setIsEditing(false);
       showToast({ message: 'Profile updated successfully', type: 'success' });
     } catch (error) {
@@ -152,16 +159,22 @@ const UserProfile: React.FC = () => {
         </div>
       </div>
 
+      <div className="email-notifications">
+        <h3>Email Notifications</h3>
+        <label>
+          <input
+            type="checkbox"
+            checked={emailNotifications}
+            onChange={(e) => setEmailNotifications(e.target.checked)}
+          />
+          Receive email notifications for new links in subscribed channels
+        </label>
+      </div>
+
       <div className="button-group">
         {!isEditing && (
           <button
-            onClick={() =>
-              handleSubmit({
-                ...localProfile,
-                digestFrequency,
-                subscribedChannels,
-              })
-            }
+            onClick={() => handleSubmit(localProfile)}
             className="btn btn-primary">
             Save Changes
           </button>

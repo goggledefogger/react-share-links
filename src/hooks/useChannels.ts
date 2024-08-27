@@ -127,6 +127,12 @@ export function useChannels() {
         createdAt: Date.now(),
       };
       const docRef = await addDoc(collection(db, "channels"), newChannel);
+
+      // Subscribe the user to the new channel
+      await updateDoc(doc(db, "users", user.uid), {
+        subscribedChannels: arrayUnion(docRef.id)
+      });
+
       await fetchChannels(); // Refresh the channel list
       return docRef.id;
     } catch (error) {
