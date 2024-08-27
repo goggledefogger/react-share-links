@@ -187,6 +187,7 @@ exports.sendNewLinkNotification = functions.firestore
     .onCreate(async (snapshot) => {
     var _a, _b, _c, _d;
     const newLink = snapshot.data();
+    const linkId = snapshot.id;
     const channelId = newLink.channelId;
     // Get all users subscribed to this channel
     const usersSnapshot = await admin.firestore()
@@ -198,17 +199,38 @@ exports.sendNewLinkNotification = functions.firestore
         .doc(channelId)
         .get();
     const channelName = channelSnapshot.exists ? (_a = channelSnapshot.data()) === null || _a === void 0 ? void 0 : _a.name : "Unknown Channel";
+    // Wait for the link preview to be generated (max 20 seconds)
+    const maxWaitTime = 20000; // 20 seconds
+    const startTime = Date.now();
+    let updatedLink = null;
+    while (Date.now() - startTime < maxWaitTime) {
+        const updatedLinkSnapshot = await admin.firestore()
+            .collection("links")
+            .doc(linkId)
+            .get();
+        updatedLink = updatedLinkSnapshot.data();
+        if (updatedLink.preview && updatedLink.preview.title) {
+            break; // Preview has been generated, exit the loop
+        }
+        // Wait for 2 seconds before checking again
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    // If we couldn't get the preview after waiting, use the original link data
+    if (!updatedLink || !updatedLink.preview) {
+        updatedLink = newLink;
+    }
     for (const userDoc of usersSnapshot.docs) {
         const user = userDoc.data();
         if (user.email && user.emailNotifications !== false) {
             // Prepare the content for the Mailjet template
             const templateContent = {
                 channelName: channelName,
-                linkUrl: newLink.url,
-                linkTitle: ((_b = newLink.preview) === null || _b === void 0 ? void 0 : _b.title) || newLink.url,
-                linkDescription: ((_c = newLink.preview) === null || _c === void 0 ? void 0 : _c.description) || "",
-                linkImage: ((_d = newLink.preview) === null || _d === void 0 ? void 0 : _d.image) || "",
+                linkUrl: updatedLink.url,
+                linkTitle: ((_b = updatedLink.preview) === null || _b === void 0 ? void 0 : _b.title) || updatedLink.url,
+                linkDescription: ((_c = updatedLink.preview) === null || _c === void 0 ? void 0 : _c.description) || "",
+                linkImage: ((_d = updatedLink.preview) === null || _d === void 0 ? void 0 : _d.image) || "",
             };
+            console.log("Template content for new link notification:", JSON.stringify(templateContent, null, 2));
             const templateId = functions.config().mailjet.new_link_email_template_id;
             // Send email using Mailjet template
             await sendEmail(user.email, user.username || "User", `New Link in ${channelName}`, templateContent, templateId);

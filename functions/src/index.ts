@@ -6,13 +6,6 @@ import { getYoutubeVideoId, isYoutubeUrl } from "./utils/youtubeUtils";
 
 admin.initializeApp();
 
-interface LinkData {
-  url: string;
-  channelId: string;
-  createdAt: admin.firestore.Timestamp;
-  preview?: LinkPreview;
-}
-
 interface LinkPreview {
   title?: string;
   description?: string;
@@ -22,13 +15,12 @@ interface LinkPreview {
   contentType: string;
 }
 
-// Add this new interface
 interface Link {
   id: string;
   channelId: string;
   userId: string;
   url: string;
-  createdAt: number;
+  createdAt: number | admin.firestore.Timestamp;
   preview?: LinkPreview;
 }
 
@@ -255,6 +247,7 @@ export const sendNewLinkNotification = functions.firestore
   .document("links/{linkId}")
   .onCreate(async (snapshot) => {
     const newLink = snapshot.data() as Link;
+    const linkId = snapshot.id;
     const channelId = newLink.channelId;
 
     // Get all users subscribed to this channel
@@ -269,17 +262,45 @@ export const sendNewLinkNotification = functions.firestore
       .get();
     const channelName = channelSnapshot.exists ? channelSnapshot.data()?.name : "Unknown Channel";
 
+    // Wait for the link preview to be generated (max 20 seconds)
+    const maxWaitTime = 20000; // 20 seconds
+    const startTime = Date.now();
+    let updatedLink: Link | null = null;
+
+    while (Date.now() - startTime < maxWaitTime) {
+      const updatedLinkSnapshot = await admin.firestore()
+        .collection("links")
+        .doc(linkId)
+        .get();
+      updatedLink = updatedLinkSnapshot.data() as Link;
+
+      if (updatedLink.preview && updatedLink.preview.title) {
+        break; // Preview has been generated, exit the loop
+      }
+
+      // Wait for 2 seconds before checking again
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    // If we couldn't get the preview after waiting, use the original link data
+    if (!updatedLink || !updatedLink.preview) {
+      updatedLink = newLink;
+    }
+
     for (const userDoc of usersSnapshot.docs) {
       const user = userDoc.data();
       if (user.email && user.emailNotifications !== false) {
         // Prepare the content for the Mailjet template
         const templateContent = {
           channelName: channelName,
-          linkUrl: newLink.url,
-          linkTitle: newLink.preview?.title || newLink.url,
-          linkDescription: newLink.preview?.description || "",
-          linkImage: newLink.preview?.image || "",
+          linkUrl: updatedLink.url,
+          linkTitle: updatedLink.preview?.title || updatedLink.url,
+          linkDescription: updatedLink.preview?.description || "",
+          linkImage: updatedLink.preview?.image || "",
         };
+
+        console.log("Template content for new link notification:",
+          JSON.stringify(templateContent, null, 2));
 
         const templateId = functions.config().mailjet.new_link_email_template_id;
         // Send email using Mailjet template
@@ -298,7 +319,7 @@ export const sendNewLinkNotification = functions.firestore
 exports.fetchAndSaveLinkPreview = functions.firestore
   .document("links/{linkId}")
   .onCreate(async (snap, context) => {
-    const linkData = snap.data() as LinkData;
+    const linkData = snap.data() as Link;
     const linkId = context.params.linkId;
 
     functions.logger.info("Fetching link data:", JSON.stringify(snap.data()));
