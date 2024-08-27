@@ -73,10 +73,6 @@ async function sendEmail(
               Name: userName,
             },
           ],
-          From: {
-            Email: "ShareLinksInfo@towntowntown.com",
-            Name: "Share Links Info",
-          },
           TemplateID: parseInt(templateId),
           TemplateLanguage: true,
           Subject: subject,
@@ -124,26 +120,25 @@ async function sendEmail(
 
 async function generateDigestContent(userId: string, daysAgo: number) {
   try {
-    const userDoc = await admin
-      .firestore()
-      .collection("users")
-      .doc(userId)
-      .get();
+    const userDoc = await admin.firestore().collection("users").doc(userId).get();
     const user = userDoc.data();
     if (!user) {
       console.error(`User data not found for userId: ${userId}`);
-      return "";
+      return null;
     }
 
     const subscribedChannels = user.subscribedChannels || [];
-
-    // log subscribed channels
+    console.log(`Generating digest for user ${userId}, daysAgo: ${daysAgo}`);
     console.log("Subscribed channels:", subscribedChannels);
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
+
+    const cutoffDate = admin.firestore.Timestamp.fromDate(
+      new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
+    );
+    console.log("Cutoff date:", cutoffDate.toDate().toISOString());
 
     const digestContent = [];
     for (const channelId of subscribedChannels) {
+      console.log(`Fetching links for channel ${channelId}`);
       const linksSnapshot = await admin
         .firestore()
         .collection("links")
@@ -152,38 +147,43 @@ async function generateDigestContent(userId: string, daysAgo: number) {
         .orderBy("createdAt", "desc")
         .get();
 
+      console.log(`Found ${linksSnapshot.size} links for channel ${channelId}`);
+
       if (!linksSnapshot.empty) {
-        console.log("Links snapshot:", linksSnapshot);
-        const channelDoc = await admin
-          .firestore()
-          .collection("channels")
-          .doc(channelId)
-          .get();
+        const channelDoc = await admin.firestore().collection("channels").doc(channelId).get();
         const channelName = channelDoc.data()?.name || "Unknown Channel";
 
         const channelLinks = linksSnapshot.docs.map((linkDoc) => {
           const link = linkDoc.data();
-          console.log("Link:", link);
+          const createdAt = link.createdAt instanceof admin.firestore.Timestamp ?
+            link.createdAt.toDate() :
+            new Date(link.createdAt);
+
+          console.log(`Link in channel ${channelId}:`, JSON.stringify({
+            ...link,
+            createdAt: createdAt.toISOString(),
+          }));
+
           return {
             url: link.url,
             title: link.preview?.title || link.url,
             description: link.preview?.description || "",
             image: link.preview?.image || "",
+            createdAt: createdAt.toISOString(),
           };
         });
 
-        digestContent.push({
-          channelName,
-          links: channelLinks,
-        });
-        console.log("Digest content:", digestContent);
+        digestContent.push({ channelName, links: channelLinks });
+      } else {
+        console.log(`No links found for channel ${channelId} within the specified time range`);
       }
     }
 
+    console.log("Final digest content:", JSON.stringify(digestContent, null, 2));
     return digestContent.length > 0 ? digestContent : null;
   } catch (error) {
     console.error(`Error generating digest content for userId ${userId}:`, error);
-    return "";
+    return null;
   }
 }
 
@@ -194,13 +194,15 @@ async function sendDigest(frequency: string, daysAgo: number) {
       .collection("users")
       .where("digestFrequency", "==", frequency)
       .get();
-    console.log(`Sending ${frequency} digest to ${usersSnapshot.size} users`);
+    console.log(`Found ${usersSnapshot.size} users for ${frequency} digest`);
     for (const userDoc of usersSnapshot.docs) {
       const userId = userDoc.id;
       const user = userDoc.data();
+      console.log(`Processing digest for user ${userId}`);
       try {
         const digestContent = await generateDigestContent(userId, daysAgo);
         if (digestContent) {
+          console.log(`Digest content generated for user ${userId}, sending email`);
           const templateContent = {
             frequency: frequency === "weekly" ? "Weekly" : "Daily",
             digestContent: digestContent,
@@ -216,14 +218,14 @@ async function sendDigest(frequency: string, daysAgo: number) {
           );
           console.log(`Digest sent successfully to user ${userId}`);
         } else {
-          console.log(`No digest content for user ${userId}`);
+          console.log(`No digest content generated for user ${userId}, skipping email`);
         }
       } catch (error) {
-        console.error(`Error sending digest to user ${userId}:`, error);
+        console.error(`Error processing digest for user ${userId}:`, error);
       }
     }
   } catch (error) {
-    console.error(`Error sending ${frequency} digest:`, error);
+    console.error(`Error in sendDigest for ${frequency} digest:`, error);
   }
 }
 
@@ -289,7 +291,12 @@ export const sendNewLinkNotification = functions.firestore
 
     for (const userDoc of usersSnapshot.docs) {
       const user = userDoc.data();
+      const userId = userDoc.id;
       if (user.email && user.emailNotifications !== false) {
+        // Generate digest content for testing
+        const dailyDigestContent = await generateDigestContent(userId, 1);
+        const weeklyDigestContent = await generateDigestContent(userId, 7);
+
         // Prepare the content for the Mailjet template
         const templateContent = {
           channelName: channelName,
@@ -297,9 +304,12 @@ export const sendNewLinkNotification = functions.firestore
           linkTitle: updatedLink.preview?.title || updatedLink.url,
           linkDescription: updatedLink.preview?.description || "",
           linkImage: updatedLink.preview?.image || "",
+          // Add digest content for testing, use empty string if null
+          dailyDigestContent: dailyDigestContent ? JSON.stringify(dailyDigestContent) : "",
+          weeklyDigestContent: weeklyDigestContent ? JSON.stringify(weeklyDigestContent) : "",
         };
 
-        console.log("Template content for new link notification:",
+        console.log("Template content for new link notification (including digest):",
           JSON.stringify(templateContent, null, 2));
 
         const templateId = functions.config().mailjet.new_link_email_template_id;
@@ -307,11 +317,12 @@ export const sendNewLinkNotification = functions.firestore
         await sendEmail(
           user.email,
           user.username || "User",
-          `New Link in ${channelName}`,
+          `New Link in ${channelName} (with Digest Test)`,
           templateContent,
           templateId
         );
-        console.log(`Notification sent to ${user.email} for new link in ${channelName}`);
+        console.log(`Notification sent to
+          ${user.email} for new link in ${channelName} (with digest test)`);
       }
     }
   });
