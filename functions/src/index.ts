@@ -120,7 +120,15 @@ async function sendEmail(
 
 async function generateDigestContent(userId: string, daysAgo: number) {
   try {
-    const userDoc = await admin.firestore().collection("users").doc(userId).get();
+    console.log(
+      `Starting generateDigestContent for userId: ${userId}, daysAgo: ${daysAgo}`
+    );
+
+    const userDoc = await admin
+      .firestore()
+      .collection("users")
+      .doc(userId)
+      .get();
     const user = userDoc.data();
     if (!user) {
       console.error(`User data not found for userId: ${userId}`);
@@ -128,64 +136,104 @@ async function generateDigestContent(userId: string, daysAgo: number) {
     }
 
     const subscribedChannels = user.subscribedChannels || [];
-    console.log(`Generating digest for user ${userId}, daysAgo: ${daysAgo}`);
-    console.log("Subscribed channels:", subscribedChannels);
+    console.log(`User ${userId} subscribed channels:`, subscribedChannels);
 
-    const cutoffDate = admin.firestore.Timestamp.fromDate(
-      new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
-    );
-    console.log("Cutoff date:", cutoffDate.toDate().toISOString());
-
-    const digestContent = [];
-    for (const channelId of subscribedChannels) {
-      console.log(`Fetching links for channel ${channelId}`);
-      const linksSnapshot = await admin
-        .firestore()
-        .collection("links")
-        .where("channelId", "==", channelId)
-        .where("createdAt", ">=", cutoffDate)
-        .orderBy("createdAt", "desc")
-        .get();
-
-      console.log(`Found ${linksSnapshot.size} links for channel ${channelId}`);
-
-      if (!linksSnapshot.empty) {
-        const channelDoc = await admin.firestore().collection("channels").doc(channelId).get();
-        const channelName = channelDoc.data()?.name || "Unknown Channel";
-
-        const channelLinks = linksSnapshot.docs.map((linkDoc) => {
-          const link = linkDoc.data();
-          const createdAt = link.createdAt instanceof admin.firestore.Timestamp ?
-            link.createdAt.toDate() :
-            new Date(link.createdAt);
-
-          console.log(`Link in channel ${channelId}:`, JSON.stringify({
-            ...link,
-            createdAt: createdAt.toISOString(),
-          }));
-
-          return {
-            url: link.url,
-            title: link.preview?.title || link.url,
-            description: link.preview?.description || "",
-            image: link.preview?.image || "",
-            createdAt: createdAt.toISOString(),
-          };
-        });
-
-        digestContent.push({ channelName, links: channelLinks });
-      } else {
-        console.log(`No links found for channel ${channelId} within the specified time range`);
-      }
+    if (subscribedChannels.length === 0) {
+      console.log(`User ${userId} has no subscribed channels`);
+      return null;
     }
 
-    console.log("Final digest content:", JSON.stringify(digestContent, null, 2));
+    const now = admin.firestore.Timestamp.now();
+    // Correct calculation for cutoffDate using microseconds
+    const cutoffDate = new admin.firestore.Timestamp(
+      now.seconds - daysAgo * 24 * 60 * 60,
+      now.nanoseconds
+    );
+    console.log("Current time:", now.toDate().toISOString());
+    console.log("Cutoff date:", cutoffDate.toDate().toISOString());
+
+    const linksQuery = admin
+      .firestore()
+      .collection("links")
+      .where("channelId", "in", subscribedChannels)
+      // .where("createdAt", ">=", cutoffDate)
+      .orderBy("createdAt", "desc")
+      .limit(100); // Limit to prevent excessive data retrieval
+
+    const linksSnapshot = await linksQuery.get();
+    console.log(
+      `Found ${linksSnapshot.size} links across all subscribed channels`
+    );
+
+    if (linksSnapshot.empty) {
+      console.log(
+        `No links found for user ${userId} within the specified time range`
+      );
+      return null;
+    }
+
+    const channelIds = new Set(
+      linksSnapshot.docs.map((doc) => doc.data().channelId)
+    );
+    const channelsSnapshot = await admin
+      .firestore()
+      .collection("channels")
+      .where(
+        admin.firestore.FieldPath.documentId(),
+        "in",
+        Array.from(channelIds)
+      )
+      .get();
+
+    const channelMap = new Map(
+      channelsSnapshot.docs.map((doc) => [
+        doc.id,
+        doc.data().name || "Unknown Channel",
+      ])
+    );
+
+    interface DigestItem {
+      channelName: string;
+      url: string;
+      title: string;
+      description: string;
+      image: string;
+      createdAt: string;
+    }
+
+    const digestContent: DigestItem[] = [];
+    linksSnapshot.docs.forEach((linkDoc) => {
+      const link = linkDoc.data();
+      const channelName = channelMap.get(link.channelId) || "Unknown Channel";
+      const createdAt =
+        link.createdAt instanceof admin.firestore.Timestamp ?
+          link.createdAt.toDate() :
+          new Date(link.createdAt);
+
+      digestContent.push({
+        channelName,
+        url: link.url,
+        title: link.preview?.title || link.url,
+        description: link.preview?.description || "",
+        image: link.preview?.image || "",
+        createdAt: createdAt.toISOString(),
+      });
+    });
+
+    console.log(
+      `Final digest content for user ${userId}:`,
+      JSON.stringify(digestContent, null, 2)
+    );
     return digestContent.length > 0 ? digestContent : null;
   } catch (error) {
-    console.error(`Error generating digest content for userId ${userId}:`, error);
+    console.error(
+      `Error generating digest content for userId ${userId}:`,
+      error
+    );
     return null;
   }
 }
+
 
 async function sendDigest(frequency: string, daysAgo: number) {
   try {
@@ -251,6 +299,14 @@ export const sendNewLinkNotification = functions.firestore
     const newLink = snapshot.data() as Link;
     const linkId = snapshot.id;
     const channelId = newLink.channelId;
+
+    console.log("New link created:", JSON.stringify({
+      linkId,
+      channelId,
+      createdAt: newLink.createdAt instanceof admin.firestore.Timestamp ?
+        newLink.createdAt.toDate().toISOString() :
+        new Date(newLink.createdAt).toISOString(),
+    }));
 
     // Get all users subscribed to this channel
     const usersSnapshot = await admin.firestore()
