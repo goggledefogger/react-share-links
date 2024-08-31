@@ -92,6 +92,8 @@ const UserProfile: React.FC = () => {
         <div className="digest-preferences">
           <h3>Digest Preferences</h3>
           <select
+            id="digestFrequency"
+            name="digestFrequency"
             value={digestFrequency}
             onChange={(e) => setDigestFrequency(e.target.value as 'daily' | 'weekly' | 'none')}
           >
@@ -108,6 +110,8 @@ const UserProfile: React.FC = () => {
               <label key={channel.id} className="channel-item">
                 <input
                   type="checkbox"
+                  id={`channel-${channel.id}`}
+                  name={`channel-${channel.id}`}
                   checked={subscribedChannels.includes(channel.id)}
                   onChange={() => handleChannelToggle(channel.id)}
                 />
@@ -122,6 +126,8 @@ const UserProfile: React.FC = () => {
           <label>
             <input
               type="checkbox"
+              id="emailNotifications"
+              name="emailNotifications"
               checked={emailNotifications}
               onChange={(e) => setEmailNotifications(e.target.checked)}
             />
