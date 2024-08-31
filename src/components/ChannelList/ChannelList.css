@@ -23,7 +23,7 @@
   display: flex;
   align-items: center;
   padding: 1rem;
-  background-color: var(--secondary-background-color);
+  background-color: var(--transparent-primary-10);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   border-left: 6px solid var(--secondary-color);
   margin-bottom: 1rem;
@@ -42,12 +42,12 @@
 }
 
 .channel-item.subscribed {
-  background-color: rgba(91, 140, 183, 0.1);
+  background-color: var(--transparent-primary-20);
   border-left-color: var(--primary-color);
 }
 
 .channel-item.subscribed:hover {
-  background-color: rgba(91, 140, 183, 0.2);
+  background-color: var(--transparent-primary-20);
 }
 
 .channel-info {

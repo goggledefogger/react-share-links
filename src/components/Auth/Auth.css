@@ -33,7 +33,7 @@
 .auth-container .input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(58, 110, 165, 0.2);
+  box-shadow: 0 0 0 2px var(--transparent-primary-dark-20);
 }
 
 .auth-container .btn {

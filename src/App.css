@@ -34,7 +34,7 @@ h6 {
 .App-header {
   background-color: var(--surface-color);
   padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--transparent-black-10);
 }
 
 .header-content {
@@ -125,7 +125,7 @@ main {
   margin: 0 auto;
   background-color: var(--surface-color);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--transparent-black-10);
   padding: 2rem;
 }
 
@@ -133,13 +133,13 @@ main {
 .card {
   background-color: var(--surface-color);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--transparent-black-10);
   transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 12px var(--transparent-black-15);
 }
 
 /* List Item Styles */
@@ -175,7 +175,7 @@ select:focus-visible {
 }
 
 .dark .btn:hover {
-  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 8px var(--transparent-white-10);
 }
 
 .dark .nav-link:hover {
@@ -183,7 +183,7 @@ select:focus-visible {
 }
 
 .dark .card:hover {
-  box-shadow: 0 6px 12px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 12px var(--transparent-black-15);
 }
 
 .dark .list-item:hover {

@@ -42,6 +42,27 @@
   --z-index-overlay: 400;
   --z-index-toast: 500;
   --z-index-emoji-picker: 1000;
+
+  /* Transparent colors */
+  --transparent-black-10: rgba(0, 0, 0, 0.1);
+  --transparent-black-15: rgba(0, 0, 0, 0.15);
+  --transparent-black-5: rgba(0, 0, 0, 0.05);
+  --transparent-black-50: rgba(0, 0, 0, 0.5);
+  --transparent-black-87: rgba(0, 0, 0, 0.87);
+  --transparent-black-60: rgba(0, 0, 0, 0.6);
+  --transparent-black-12: rgba(0, 0, 0, 0.12);
+  --transparent-black-24: rgba(0, 0, 0, 0.24);
+  --transparent-black-40: rgba(0, 0, 0, 0.4);
+  --transparent-white-10: rgba(255, 255, 255, 0.1);
+  --transparent-primary-10: rgba(91, 140, 183, 0.1);
+  --transparent-primary-20: rgba(91, 140, 183, 0.2);
+  --transparent-primary-dark-20: rgba(58, 110, 165, 0.2);
+
+  /* Additional colors */
+  --gray-light: #ECEFF1;
+  --gray-medium: #888;
+  --orange: #ffa100;
+  --blue-light: #039be5;
 }
 
 /* Light theme */
