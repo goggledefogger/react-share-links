@@ -77,6 +77,10 @@ async function sendEmail(
           TemplateLanguage: true,
           Subject: subject,
           Variables: templateContent,
+          TemplateErrorReporting: {
+            Email: "roytownwizard@protonmail.com",
+            Name: "Share Links Error Reporter",
+          },
         },
       ],
     }) as MailjetResponse;
@@ -361,8 +365,8 @@ export const sendNewLinkNotification = functions.firestore
           linkDescription: updatedLink.preview?.description || "",
           linkImage: updatedLink.preview?.image || "",
           // Add digest content for testing, use empty string if null
-          dailyDigestContent: dailyDigestContent ? JSON.stringify(dailyDigestContent) : "",
-          weeklyDigestContent: weeklyDigestContent ? JSON.stringify(weeklyDigestContent) : "",
+          dailyDigestContent: dailyDigestContent ? dailyDigestContent : "",
+          weeklyDigestContent: weeklyDigestContent ? weeklyDigestContent : "",
         };
 
         console.log("Template content for new link notification (including digest):",

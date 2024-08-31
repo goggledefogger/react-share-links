@@ -36,6 +36,10 @@ async function sendEmail(userEmail, userName, subject, templateContent, template
                     TemplateLanguage: true,
                     Subject: subject,
                     Variables: templateContent,
+                    TemplateErrorReporting: {
+                        Email: "roytownwizard@protonmail.com",
+                        Name: "Share Links Error Reporter",
+                    },
                 },
             ],
         });
@@ -251,8 +255,8 @@ exports.sendNewLinkNotification = functions.firestore
                 linkDescription: ((_c = updatedLink.preview) === null || _c === void 0 ? void 0 : _c.description) || "",
                 linkImage: ((_d = updatedLink.preview) === null || _d === void 0 ? void 0 : _d.image) || "",
                 // Add digest content for testing, use empty string if null
-                dailyDigestContent: dailyDigestContent ? JSON.stringify(dailyDigestContent) : "",
-                weeklyDigestContent: weeklyDigestContent ? JSON.stringify(weeklyDigestContent) : "",
+                dailyDigestContent: dailyDigestContent ? dailyDigestContent : "",
+                weeklyDigestContent: weeklyDigestContent ? weeklyDigestContent : "",
             };
             console.log("Template content for new link notification (including digest):", JSON.stringify(templateContent, null, 2));
             const templateId = functions.config().mailjet.new_link_email_template_id;
