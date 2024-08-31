@@ -86,6 +86,44 @@
   background-color: var(--dark-surface-color);
 }
 
-.dark .channel-item span {
+.dark .channel-item span,
+.dark .email-notifications label {
+  color: var(--dark-text-color);
+}
+
+.email-notifications {
+  margin-top: 2rem;
+}
+
+.email-notifications-form {
+  display: flex;
+  align-items: center;
+}
+
+.email-notifications label {
+  display: flex;
+  align-items: center;
   color: var(--text-color);
+  cursor: pointer;
+}
+
+.email-notifications input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+.preferences-form {
+  margin-top: 2rem;
+}
+
+.preferences-form > div {
+  margin-bottom: 1.5rem;
+}
+
+.preferences-form select,
+.preferences-form input[type="checkbox"] {
+  margin-top: 0.5rem;
+}
+
+.preferences-form button[type="submit"] {
+  margin-top: 1rem;
 }

@@ -12,33 +12,25 @@ const UserProfile: React.FC = () => {
   const { showToast } = useToast();
   const { channelList } = useChannels();
   const [isEditing, setIsEditing] = useState(false);
-  const [localProfile, setLocalProfile] = useState<UserProfileType | null>(
-    null
-  );
-  const [digestFrequency, setDigestFrequency] = useState<
-    'daily' | 'weekly' | 'none'
-  >('none');
+  const [localProfile, setLocalProfile] = useState<UserProfileType | null>(null);
+  const [digestFrequency, setDigestFrequency] = useState<'daily' | 'weekly' | 'none'>('none');
   const [subscribedChannels, setSubscribedChannels] = useState<string[]>([]);
-  const [emailNotifications, setEmailNotifications] = useState(localProfile?.emailNotifications ?? true);
+  const [emailNotifications, setEmailNotifications] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setLocalProfile(profile);
       setDigestFrequency(profile.digestFrequency || 'none');
       setSubscribedChannels(profile.subscribedChannels || []);
+      setEmailNotifications(profile.emailNotifications);
     }
   }, [profile]);
 
-  const handleSubmit = async (updatedProfile: Partial<UserProfileType>) => {
+  const handleProfileSubmit = async (formData: { [key: string]: string }) => {
     if (!user) return;
     try {
-      await updateUserProfile(user.uid, {
-        ...updatedProfile,
-        emailNotifications,
-        digestFrequency,
-        subscribedChannels,
-      });
-      setLocalProfile((prev) => ({ ...prev, ...updatedProfile } as UserProfileType));
+      await updateUserProfile(user.uid, formData);
+      setLocalProfile((prev) => ({ ...prev, ...formData } as UserProfileType));
       setIsEditing(false);
       showToast({ message: 'Profile updated successfully', type: 'success' });
     } catch (error) {
@@ -46,15 +38,19 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handleFormSubmit = (formData: { [key: string]: string }) => {
-    if (!localProfile) return;
-    const updatedProfile = {
-      ...localProfile,
-      ...formData,
-      digestFrequency,
-      subscribedChannels,
-    };
-    handleSubmit(updatedProfile);
+  const handlePreferencesSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user) return;
+    try {
+      await updateUserProfile(user.uid, {
+        digestFrequency,
+        subscribedChannels,
+        emailNotifications,
+      });
+      showToast({ message: 'Preferences updated successfully', type: 'success' });
+    } catch (error) {
+      showToast({ message: 'Failed to update preferences', type: 'error' });
+    }
   };
 
   const handleChannelToggle = (channelId: string) => {
@@ -65,29 +61,9 @@ const UserProfile: React.FC = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="user-profile loading">
-        <LoadingSpinner size="large" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="user-profile error">
-        <p>{error}</p>
-      </div>
-    );
-  }
-
-  if (!user || !localProfile) {
-    return (
-      <div className="user-profile error">
-        <p>Error: Unable to load user profile. Please try again later.</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="user-profile loading"><LoadingSpinner size="large" /></div>;
+  if (error) return <div className="user-profile error"><p>{error}</p></div>;
+  if (!user || !localProfile) return <div className="user-profile error"><p>Error: Unable to load user profile. Please try again later.</p></div>;
 
   return (
     <div className="user-profile">
@@ -95,91 +71,68 @@ const UserProfile: React.FC = () => {
       {isEditing ? (
         <Form
           fields={[
-            {
-              name: 'username',
-              type: 'text',
-              placeholder: 'Username',
-              required: true,
-              defaultValue: localProfile.username,
-            },
-            {
-              name: 'email',
-              type: 'email',
-              placeholder: 'Email',
-              required: true,
-              defaultValue: localProfile.email,
-            },
+            { name: 'username', type: 'text', placeholder: 'Username', required: true, defaultValue: localProfile.username },
+            { name: 'email', type: 'email', placeholder: 'Email', required: true, defaultValue: localProfile.email },
           ]}
-          onSubmit={handleFormSubmit}
+          onSubmit={handleProfileSubmit}
           submitButtonText="Save Changes"
           submitButtonClass="btn btn-primary"
         />
       ) : (
         <div className="profile-info">
-          <p>
-            <strong>Username:</strong> {localProfile.username}
-          </p>
-          <p>
-            <strong>Email:</strong> {localProfile.email}
-          </p>
-          <button
-            onClick={() => setIsEditing(true)}
-            className="btn btn-secondary">
+          <p><strong>Username:</strong> {localProfile.username}</p>
+          <p><strong>Email:</strong> {localProfile.email}</p>
+          <button onClick={() => setIsEditing(true)} className="btn btn-secondary">
             Edit Profile
           </button>
         </div>
       )}
 
-      <div className="digest-preferences">
-        <h3>Digest Preferences</h3>
-        <select
-          value={digestFrequency}
-          onChange={(e) =>
-            setDigestFrequency(e.target.value as 'daily' | 'weekly' | 'none')
-          }>
-          <option value="none">No digest</option>
-          <option value="daily">Daily digest</option>
-          <option value="weekly">Weekly digest</option>
-        </select>
-      </div>
-
-      <div className="subscribed-channels">
-        <h3>Subscribed Channels</h3>
-        <div className="channel-list">
-          {channelList.map((channel) => (
-            <label key={channel.id} className="channel-item">
-              <input
-                type="checkbox"
-                checked={subscribedChannels.includes(channel.id)}
-                onChange={() => handleChannelToggle(channel.id)}
-              />
-              <span>{channel.name}</span>
-            </label>
-          ))}
+      <form onSubmit={handlePreferencesSubmit} className="preferences-form">
+        <div className="digest-preferences">
+          <h3>Digest Preferences</h3>
+          <select
+            value={digestFrequency}
+            onChange={(e) => setDigestFrequency(e.target.value as 'daily' | 'weekly' | 'none')}
+          >
+            <option value="none">No digest</option>
+            <option value="daily">Daily digest</option>
+            <option value="weekly">Weekly digest</option>
+          </select>
         </div>
-      </div>
 
-      <div className="email-notifications">
-        <h3>Email Notifications</h3>
-        <label>
-          <input
-            type="checkbox"
-            checked={emailNotifications}
-            onChange={(e) => setEmailNotifications(e.target.checked)}
-          />
-          Receive email notifications for new links in subscribed channels
-        </label>
-      </div>
+        <div className="subscribed-channels">
+          <h3>Subscribed Channels</h3>
+          <div className="channel-list">
+            {channelList.map((channel) => (
+              <label key={channel.id} className="channel-item">
+                <input
+                  type="checkbox"
+                  checked={subscribedChannels.includes(channel.id)}
+                  onChange={() => handleChannelToggle(channel.id)}
+                />
+                <span>{channel.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
 
-      <div className="button-group">
-        {!isEditing && (
-          <button
-            onClick={() => handleSubmit(localProfile)}
-            className="btn btn-primary">
-            Save Changes
-          </button>
-        )}
-      </div>
+        <div className="email-notifications">
+          <h3>Email Notifications</h3>
+          <label>
+            <input
+              type="checkbox"
+              checked={emailNotifications}
+              onChange={(e) => setEmailNotifications(e.target.checked)}
+            />
+            Receive email notifications for new links in subscribed channels
+          </label>
+        </div>
+
+        <button type="submit" className="btn btn-primary">
+          Save Preferences
+        </button>
+      </form>
     </div>
   );
 };
