@@ -119,11 +119,6 @@
   margin-bottom: 1.5rem;
 }
 
-.preferences-form select,
-.preferences-form input[type="checkbox"] {
-  margin-top: 0.5rem;
-}
-
 .preferences-form button[type="submit"] {
   margin-top: 1rem;
 }
