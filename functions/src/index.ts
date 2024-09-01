@@ -149,11 +149,9 @@ async function generateDigestContent(userId: string, daysAgo: number) {
     }
 
     const now = admin.firestore.Timestamp.now();
-    // Correct calculation for cutoffDate using microseconds
-    const cutoffDate = new admin.firestore.Timestamp(
-      now.seconds - daysAgo * 24 * 60 * 60,
-      now.nanoseconds
-    );
+
+    const cutoffDate = admin.firestore.Timestamp.fromMillis(
+      now.seconds - daysAgo * 24 * 60 * 60 * 1000);
     console.log("Current time:", now.toDate().toISOString());
     console.log("Cutoff date:", cutoffDate.toDate().toISOString());
 
@@ -161,7 +159,7 @@ async function generateDigestContent(userId: string, daysAgo: number) {
       .firestore()
       .collection("links")
       .where("channelId", "in", subscribedChannels)
-      // .where("createdAt", ">=", cutoffDate)
+      .where("createdAt", ">=", cutoffDate)
       .orderBy("createdAt", "desc")
       .limit(100); // Limit to prevent excessive data retrieval
 
@@ -216,15 +214,26 @@ async function generateDigestContent(userId: string, daysAgo: number) {
       uniqueUserIds.add(link.userId);
     });
 
+    console.log(`Unique user IDs found: ${Array.from(uniqueUserIds).join(", ")}`);
+
     // Fetch all usernames in bulk
+    console.log("Starting bulk username fetch");
     const usernames = await Promise.all(
-      Array.from(uniqueUserIds).map(getUsernameById)
+      Array.from(uniqueUserIds).map(async (id) => {
+        const username = await getUsernameById(id);
+        console.log(`Fetched username for user ${id}: ${username}`);
+        return username;
+      })
     );
+
+    console.log("Bulk username fetch completed");
 
     // Create a map of user IDs to usernames
     const usernameMap = new Map(
       Array.from(uniqueUserIds).map((id, index) => [id, usernames[index]])
     );
+
+    console.log("Username map created:", JSON.stringify(Object.fromEntries(usernameMap)));
 
     // Now process the links using the cached usernames
     for (const linkDoc of linksSnapshot.docs) {
@@ -236,6 +245,7 @@ async function generateDigestContent(userId: string, daysAgo: number) {
           new Date(link.createdAt);
 
       const username = usernameMap.get(link.userId) || "Unknown User";
+      console.log(`Using username '${username}' for user ${link.userId}`);
 
       digestContent.push({
         channelName,
