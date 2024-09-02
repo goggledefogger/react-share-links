@@ -16,6 +16,8 @@ import {
   startAfter,
   arrayUnion,
   arrayRemove,
+  serverTimestamp,
+  FieldValue,
 } from "firebase/firestore";
 import { db, auth } from "../lib/firebase";
 import { Channel, Link } from "../types";
@@ -124,7 +126,7 @@ export function useChannels() {
       const newChannel = {
         name: channelName.trim(),
         createdBy: user.uid,
-        createdAt: Date.now(),
+        createdAt: serverTimestamp(), // Use serverTimestamp here
       };
       const docRef = await addDoc(collection(db, "channels"), newChannel);
 
@@ -170,7 +172,7 @@ export function useChannels() {
         channelId,
         userId: user.uid,
         url,
-        createdAt: Date.now(),
+        createdAt: serverTimestamp() as FieldValue, // Use serverTimestamp here
         reactions: [],
         preview: null, // Add a default value for preview
       };

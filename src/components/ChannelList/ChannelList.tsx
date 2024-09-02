@@ -19,6 +19,7 @@ import {
 import { formatRelativeTime } from "../../utils/dateUtils";
 import "./ChannelList.css";
 import { useChannelLinkCounts } from "../../hooks/useChannelLinkCounts";
+import { Timestamp } from "firebase/firestore";
 
 const CHANNELS_PER_PAGE = 20;
 
@@ -57,11 +58,13 @@ const ChannelList: React.FC = () => {
       const bSubscribed = profile?.subscribedChannels?.includes(b.id) || false;
 
       if (aSubscribed !== bSubscribed) {
-      return aSubscribed ? -1 : 1;
+        return aSubscribed ? -1 : 1;
       }
 
       // If subscription status is the same, sort by createdAt in descending order
-      return b.createdAt - a.createdAt;
+      const aCreatedAt = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : (a.createdAt as number);
+      const bCreatedAt = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : (b.createdAt as number);
+      return bCreatedAt - aCreatedAt;
     });
   }, [channels, profile?.subscribedChannels]);
 
@@ -270,7 +273,11 @@ const ChannelList: React.FC = () => {
                         channel.createdBy === user?.uid ? "current-user" : ""
                       }`}>
                       <FaClock className="icon" />{" "}
-                      {formatRelativeTime(channel.createdAt)}
+                      {formatRelativeTime(
+                        channel.createdAt instanceof Timestamp
+                          ? channel.createdAt.toMillis()
+                          : (channel.createdAt as number)
+                      )}
                     </span>
                     <span className="channel-link-count">
                       <FaLink className="icon" />{" "}

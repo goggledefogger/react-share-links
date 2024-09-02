@@ -1,3 +1,5 @@
+import { Timestamp, FieldValue } from "firebase/firestore";
+
 export interface User {
   id: string;
   username: string;
@@ -23,22 +25,21 @@ export interface Link {
   channelId: string;
   userId: string;
   url: string;
-  createdAt: number;
-  preview: {
-    title: string;
-    description: string;
-    image: string;
-    favicon: string;
-  } | null;
+  createdAt: Timestamp | FieldValue;
   reactions: Reaction[];
-  username?: string;
+  preview: {
+    title?: string;
+    description?: string;
+    image?: string;
+    favicon?: string;
+    mediaType: string;
+    contentType: string;
+  } | null;
 }
 
 export interface Channel {
   id: string;
   name: string;
-  description?: string;
   createdBy: string;
-  creatorUsername: string;
-  createdAt: number;
+  createdAt: Timestamp | number;
 }
