@@ -3,6 +3,7 @@ import * as admin from "firebase-admin";
 import { Client } from "node-mailjet";
 import { getLinkPreview } from "link-preview-js";
 import { getYoutubeVideoId, isYoutubeUrl } from "./utils/youtubeUtils";
+import { getUsernameById } from "./utils/userUtils";
 
 admin.initializeApp();
 
@@ -148,10 +149,9 @@ async function generateDigestContent(userId: string, daysAgo: number) {
     }
 
     const now = admin.firestore.Timestamp.now();
-    // Correct calculation for cutoffDate using microseconds
-    const cutoffDate = new admin.firestore.Timestamp(
-      now.seconds - daysAgo * 24 * 60 * 60,
-      now.nanoseconds
+
+    const cutoffDate = admin.firestore.Timestamp.fromMillis(
+      now.toMillis() - daysAgo * 24 * 60 * 60 * 1000
     );
     console.log("Current time:", now.toDate().toISOString());
     console.log("Cutoff date:", cutoffDate.toDate().toISOString());
@@ -160,7 +160,7 @@ async function generateDigestContent(userId: string, daysAgo: number) {
       .firestore()
       .collection("links")
       .where("channelId", "in", subscribedChannels)
-      // .where("createdAt", ">=", cutoffDate)
+      .where("createdAt", ">=", cutoffDate)
       .orderBy("createdAt", "desc")
       .limit(100); // Limit to prevent excessive data retrieval
 
@@ -203,16 +203,50 @@ async function generateDigestContent(userId: string, daysAgo: number) {
       description: string;
       image: string;
       createdAt: string;
+      username: string;
     }
 
     const digestContent: DigestItem[] = [];
+    const uniqueUserIds = new Set<string>();
+
+    // First, collect all unique user IDs
     linksSnapshot.docs.forEach((linkDoc) => {
+      const link = linkDoc.data();
+      uniqueUserIds.add(link.userId);
+    });
+
+    console.log(`Unique user IDs found: ${Array.from(uniqueUserIds).join(", ")}`);
+
+    // Fetch all usernames in bulk
+    console.log("Starting bulk username fetch");
+    const usernames = await Promise.all(
+      Array.from(uniqueUserIds).map(async (id) => {
+        const username = await getUsernameById(id);
+        console.log(`Fetched username for user ${id}: ${username}`);
+        return username;
+      })
+    );
+
+    console.log("Bulk username fetch completed");
+
+    // Create a map of user IDs to usernames
+    const usernameMap = new Map(
+      Array.from(uniqueUserIds).map((id, index) => [id, usernames[index]])
+    );
+
+    console.log("Username map created:", JSON.stringify(Object.fromEntries(usernameMap)));
+
+    // Now process the links using the cached usernames
+    for (const linkDoc of linksSnapshot.docs) {
       const link = linkDoc.data();
       const channelName = channelMap.get(link.channelId) || "Unknown Channel";
       const createdAt =
         link.createdAt instanceof admin.firestore.Timestamp ?
           link.createdAt.toDate() :
           new Date(link.createdAt);
+
+      const username = usernameMap.get(link.userId) || "Unknown User";
+      console.log(`Using username '${username}' for user ${link.userId}`);
 
       digestContent.push({
         channelName,
@@ -221,8 +255,9 @@ async function generateDigestContent(userId: string, daysAgo: number) {
         description: link.preview?.description || "",
         image: link.preview?.image || "",
         createdAt: createdAt.toISOString(),
+        username: username,
       });
-    });
+    }
 
     console.log(
       `Final digest content for user ${userId}:`,
@@ -349,14 +384,11 @@ export const sendNewLinkNotification = functions.firestore
       updatedLink = newLink;
     }
 
+    const creatorUsername = await getUsernameById(newLink.userId);
+
     for (const userDoc of usersSnapshot.docs) {
       const user = userDoc.data();
-      const userId = userDoc.id;
       if (user.email && user.emailNotifications !== false) {
-        // Generate digest content for testing
-        const dailyDigestContent = await generateDigestContent(userId, 1);
-        const weeklyDigestContent = await generateDigestContent(userId, 7);
-
         // Prepare the content for the Mailjet template
         const templateContent = {
           channelName: channelName,
@@ -364,12 +396,10 @@ export const sendNewLinkNotification = functions.firestore
           linkTitle: updatedLink.preview?.title || updatedLink.url,
           linkDescription: updatedLink.preview?.description || "",
           linkImage: updatedLink.preview?.image || "",
-          // Add digest content for testing, use empty string if null
-          dailyDigestContent: dailyDigestContent ? dailyDigestContent : "",
-          weeklyDigestContent: weeklyDigestContent ? weeklyDigestContent : "",
+          creatorUsername: creatorUsername,
         };
 
-        console.log("Template content for new link notification (including digest):",
+        console.log("Template content for new link notification:",
           JSON.stringify(templateContent, null, 2));
 
         const templateId = functions.config().mailjet.new_link_email_template_id;
@@ -377,12 +407,11 @@ export const sendNewLinkNotification = functions.firestore
         await sendEmail(
           user.email,
           user.username || "User",
-          `New Link in ${channelName} (with Digest Test)`,
+          `New Link in ${channelName}`,
           templateContent,
           templateId
         );
-        console.log(`Notification sent to
-          ${user.email} for new link in ${channelName} (with digest test)`);
+        console.log(`Notification sent to ${user.email} for new link in ${channelName}`);
       }
     }
   });
