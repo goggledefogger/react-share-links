@@ -95,7 +95,7 @@ async function generateDigestContent(userId, daysAgo) {
             return null;
         }
         const now = admin.firestore.Timestamp.now();
-        const cutoffDate = admin.firestore.Timestamp.fromMillis(now.seconds - daysAgo * 24 * 60 * 60 * 1000);
+        const cutoffDate = admin.firestore.Timestamp.fromMillis(now.toMillis() - daysAgo * 24 * 60 * 60 * 1000);
         console.log("Current time:", now.toDate().toISOString());
         console.log("Cutoff date:", cutoffDate.toDate().toISOString());
         const linksQuery = admin
