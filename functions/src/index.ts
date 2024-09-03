@@ -4,7 +4,7 @@ import { Client } from "node-mailjet";
 import { getLinkPreview } from "link-preview-js";
 import { getYoutubeVideoId, isYoutubeUrl } from "./utils/youtubeUtils";
 import { getUsernameById } from "./utils/userUtils";
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, FieldValue } from "firebase-admin/firestore";
 
 admin.initializeApp();
 
@@ -662,14 +662,34 @@ export const deleteChannel = functions.https.onCall(async (data, context) => {
 
     console.log(`Authorized delete for channel ${channelId} by user ${userId}`);
 
-    // Soft delete: Move the channel to the deletedChannels collection
+    // Get all users subscribed to this channel
+    const usersSnapshot = await admin.firestore().collection("users")
+      .where("subscribedChannels", "array-contains", channelId).get();
+
+    // Create an array of user IDs who were subscribed to the channel
+    const subscribedUserIds = usersSnapshot.docs.map((doc) => doc.id);
+
+    // Soft delete: Move the channel to the deletedChannels collection with subscribed users
     await db.collection("deletedChannels").doc(channelId).set({
       ...channelData,
       deletedAt: admin.firestore.FieldValue.serverTimestamp(),
       deletedBy: userId,
+      subscribedUsersAtDeletion: subscribedUserIds, // Add this new field
     });
 
-    console.log(`Channel ${channelId} moved to deletedChannels collection`);
+    console.log(`Channel ${channelId} moved to deletedChannels collection with
+      ${subscribedUserIds.length} subscribed users`);
+
+    // Remove the channel from all users' subscriptions
+    const batch = admin.firestore().batch();
+    usersSnapshot.docs.forEach((userDoc) => {
+      batch.update(userDoc.ref, {
+        subscribedChannels: FieldValue.arrayRemove(channelId),
+      });
+    });
+    await batch.commit();
+
+    console.log(`Channel ${channelId} removed from all users' subscriptions`);
 
     // Delete the channel from the original collection
     await channelRef.delete();

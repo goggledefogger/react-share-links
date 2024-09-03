@@ -469,9 +469,24 @@ exports.deleteChannel = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("permission-denied", "Only the channel creator can delete the channel");
         }
         console.log(`Authorized delete for channel ${channelId} by user ${userId}`);
-        // Soft delete: Move the channel to the deletedChannels collection
-        await db.collection("deletedChannels").doc(channelId).set(Object.assign(Object.assign({}, channelData), { deletedAt: admin.firestore.FieldValue.serverTimestamp(), deletedBy: userId }));
-        console.log(`Channel ${channelId} moved to deletedChannels collection`);
+        // Get all users subscribed to this channel
+        const usersSnapshot = await admin.firestore().collection("users")
+            .where("subscribedChannels", "array-contains", channelId).get();
+        // Create an array of user IDs who were subscribed to the channel
+        const subscribedUserIds = usersSnapshot.docs.map((doc) => doc.id);
+        // Soft delete: Move the channel to the deletedChannels collection with subscribed users
+        await db.collection("deletedChannels").doc(channelId).set(Object.assign(Object.assign({}, channelData), { deletedAt: admin.firestore.FieldValue.serverTimestamp(), deletedBy: userId, subscribedUsersAtDeletion: subscribedUserIds }));
+        console.log(`Channel ${channelId} moved to deletedChannels collection with
+      ${subscribedUserIds.length} subscribed users`);
+        // Remove the channel from all users' subscriptions
+        const batch = admin.firestore().batch();
+        usersSnapshot.docs.forEach((userDoc) => {
+            batch.update(userDoc.ref, {
+                subscribedChannels: firestore_1.FieldValue.arrayRemove(channelId),
+            });
+        });
+        await batch.commit();
+        console.log(`Channel ${channelId} removed from all users' subscriptions`);
         // Delete the channel from the original collection
         await channelRef.delete();
         console.log(`Channel ${channelId} deleted from channels collection`);
