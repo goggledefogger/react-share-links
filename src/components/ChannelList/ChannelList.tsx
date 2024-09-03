@@ -24,7 +24,7 @@ const CHANNELS_PER_PAGE = 20;
 
 const ChannelList: React.FC = () => {
   const navigate = useNavigate();
-  const { addChannel, deleteChannel, updateChannel, getUsernameById } = useChannels();
+  const { addChannel, deleteChannel, updateChannel, getUsernameById, isDeletingChannel } = useChannels();
   const { user, profile, loading: authLoading } = useAuthUser();
   const [editingChannelId, setEditingChannelId] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -33,6 +33,7 @@ const ChannelList: React.FC = () => {
   }>({ isOpen: false, channelId: null });
   const { showToast } = useToast();
   const [creatorUsernames, setCreatorUsernames] = useState<Record<string, string>>({});
+  const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null);
 
   const channelsConfig: QueryConfig = useMemo(
     () => ({
@@ -168,13 +169,16 @@ const ChannelList: React.FC = () => {
   const handleDeleteConfirm = useCallback(async () => {
     if (deleteConfirmation.channelId) {
       try {
+        setDeletingChannelId(deleteConfirmation.channelId);
         await deleteChannel(deleteConfirmation.channelId);
         showToast({ message: "Channel deleted successfully", type: "success" });
       } catch (error) {
         console.error("Error deleting channel:", error);
         showToast({ message: "Failed to delete channel", type: "error" });
+      } finally {
+        setDeletingChannelId(null);
+        setDeleteConfirmation({ isOpen: false, channelId: null });
       }
-      setDeleteConfirmation({ isOpen: false, channelId: null });
     }
   }, [deleteConfirmation.channelId, deleteChannel, showToast]);
 
@@ -295,8 +299,13 @@ const ChannelList: React.FC = () => {
                         e.stopPropagation();
                         handleDeleteClick(channel.id);
                       }}
-                      title="Delete Channel">
-                      <FaTrash />
+                      title="Delete Channel"
+                      disabled={isDeletingChannel}>
+                      {deletingChannelId === channel.id ? (
+                        <LoadingSpinner size="small" />
+                      ) : (
+                        <FaTrash />
+                      )}
                     </button>
                   </div>
                 )}
@@ -335,6 +344,11 @@ const ChannelList: React.FC = () => {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
       />
+      {isDeletingChannel && (
+        <div className="loading-overlay">
+          <LoadingSpinner size="large" />
+        </div>
+      )}
     </div>
   );
 };

@@ -17,7 +17,8 @@ import {
   arrayUnion,
   arrayRemove,
 } from "firebase/firestore";
-import { db, auth } from "../lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { db, auth, functions } from "../lib/firebase"; // Add functions to the import
 import { Channel, Link } from "../types";
 
 const MAX_RETRY_ATTEMPTS = 3;
@@ -28,6 +29,7 @@ export function useChannels() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isDeletingChannel, setIsDeletingChannel] = useState(false);
 
   const fetchChannels = useCallback(async () => {
     setLoading(true);
@@ -143,11 +145,15 @@ export function useChannels() {
 
   const deleteChannel = async (channelId: string) => {
     try {
-      await deleteDoc(doc(db, "channels", channelId));
+      setIsDeletingChannel(true);
+      const deleteChannelFunction = httpsCallable(functions, 'deleteChannel');
+      await deleteChannelFunction({ channelId });
       await fetchChannels(); // Refresh the channel list
     } catch (error) {
       console.error("Error deleting channel:", error);
       throw error;
+    } finally {
+      setIsDeletingChannel(false);
     }
   };
 
@@ -265,5 +271,6 @@ export function useChannels() {
     removeEmojiReaction,
     getAllChannelLinkCounts,
     getUsernameById,
+    isDeletingChannel,
   };
 }

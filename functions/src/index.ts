@@ -626,4 +626,65 @@ async function handleYoutubeLink(linkId: string, url: string) {
   return null;
 }
 
+export const deleteChannel = functions.https.onCall(async (data, context) => {
+  // Check if the user is authenticated
+  if (!context.auth) {
+    console.log("Unauthenticated delete attempt");
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    );
+  }
+
+  const { channelId } = data;
+  const userId = context.auth.uid;
+
+  console.log(`Attempt to delete channel ${channelId} by user ${userId}`);
+
+  try {
+    const db = admin.firestore();
+    const channelRef = db.collection("channels").doc(channelId);
+    const channelDoc = await channelRef.get();
+
+    if (!channelDoc.exists) {
+      console.log(`Channel ${channelId} not found`);
+      throw new functions.https.HttpsError("not-found", "Channel not found");
+    }
+
+    const channelData = channelDoc.data();
+
+    // Check if the user is the creator of the channel
+    if (channelData?.createdBy !== userId) {
+      console.log(`Unauthorized delete attempt for channel
+        ${channelId} by user ${userId}. Channel creator: ${channelData?.createdBy}`);
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Only the channel creator can delete the channel"
+      );
+    }
+
+    console.log(`Authorized delete for channel ${channelId} by user ${userId}`);
+
+    // Soft delete: Move the channel to the deletedChannels collection
+    await db.collection("deletedChannels").doc(channelId).set({
+      ...channelData,
+      deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      deletedBy: userId,
+    });
+
+    console.log(`Channel ${channelId} moved to deletedChannels collection`);
+
+    // Delete the channel from the original collection
+    await channelRef.delete();
+
+    console.log(`Channel ${channelId} deleted from channels collection`);
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Error in deleteChannel for channel ${channelId}:`, error);
+    throw new functions.https.HttpsError("internal",
+      "An error occurred while deleting the channel");
+  }
+});
+
 export { sendEmail };

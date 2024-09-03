@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, setLogLevel } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 
 const requiredEnvVars = [
   'REACT_APP_FIREBASE_API_KEY',
@@ -30,6 +31,7 @@ const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const functions = getFunctions(app);
 
 // setLogLevel("debug");
 

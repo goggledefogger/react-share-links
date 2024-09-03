@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendEmail = exports.sendNewLinkNotification = exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
+exports.sendEmail = exports.deleteChannel = exports.sendNewLinkNotification = exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const node_mailjet_1 = require("node-mailjet");
@@ -443,4 +443,42 @@ async function handleYoutubeLink(linkId, url) {
     });
     return null;
 }
+exports.deleteChannel = functions.https.onCall(async (data, context) => {
+    // Check if the user is authenticated
+    if (!context.auth) {
+        console.log("Unauthenticated delete attempt");
+        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+    const { channelId } = data;
+    const userId = context.auth.uid;
+    console.log(`Attempt to delete channel ${channelId} by user ${userId}`);
+    try {
+        const db = admin.firestore();
+        const channelRef = db.collection("channels").doc(channelId);
+        const channelDoc = await channelRef.get();
+        if (!channelDoc.exists) {
+            console.log(`Channel ${channelId} not found`);
+            throw new functions.https.HttpsError("not-found", "Channel not found");
+        }
+        const channelData = channelDoc.data();
+        // Check if the user is the creator of the channel
+        if ((channelData === null || channelData === void 0 ? void 0 : channelData.createdBy) !== userId) {
+            console.log(`Unauthorized delete attempt for channel
+        ${channelId} by user ${userId}. Channel creator: ${channelData === null || channelData === void 0 ? void 0 : channelData.createdBy}`);
+            throw new functions.https.HttpsError("permission-denied", "Only the channel creator can delete the channel");
+        }
+        console.log(`Authorized delete for channel ${channelId} by user ${userId}`);
+        // Soft delete: Move the channel to the deletedChannels collection
+        await db.collection("deletedChannels").doc(channelId).set(Object.assign(Object.assign({}, channelData), { deletedAt: admin.firestore.FieldValue.serverTimestamp(), deletedBy: userId }));
+        console.log(`Channel ${channelId} moved to deletedChannels collection`);
+        // Delete the channel from the original collection
+        await channelRef.delete();
+        console.log(`Channel ${channelId} deleted from channels collection`);
+        return { success: true };
+    }
+    catch (error) {
+        console.error(`Error in deleteChannel for channel ${channelId}:`, error);
+        throw new functions.https.HttpsError("internal", "An error occurred while deleting the channel");
+    }
+});
 //# sourceMappingURL=index.js.map
