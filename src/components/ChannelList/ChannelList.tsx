@@ -61,10 +61,10 @@ const ChannelList: React.FC = () => {
         return aSubscribed ? -1 : 1;
       }
 
-      // If subscription status is the same, sort by createdAt in descending order
-      const aCreatedAt = a.createdAt instanceof Timestamp ? a.createdAt.toMillis() : (a.createdAt as number);
-      const bCreatedAt = b.createdAt instanceof Timestamp ? b.createdAt.toMillis() : (b.createdAt as number);
-      return bCreatedAt - aCreatedAt;
+      // Sort by createdAt in descending order
+      const aTimestamp = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+      const bTimestamp = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+      return bTimestamp - aTimestamp;
     });
   }, [channels, profile?.subscribedChannels]);
 
@@ -273,11 +273,9 @@ const ChannelList: React.FC = () => {
                         channel.createdBy === user?.uid ? "current-user" : ""
                       }`}>
                       <FaClock className="icon" />{" "}
-                      {formatRelativeTime(
-                        channel.createdAt instanceof Timestamp
-                          ? channel.createdAt.toMillis()
-                          : (channel.createdAt as number)
-                      )}
+                      {channel.createdAt?.toMillis
+                        ? formatRelativeTime(channel.createdAt.toMillis())
+                        : "Just now"}
                     </span>
                     <span className="channel-link-count">
                       <FaLink className="icon" />{" "}

@@ -41,5 +41,5 @@ export interface Channel {
   id: string;
   name: string;
   createdBy: string;
-  createdAt: Timestamp | number;
+  createdAt: Timestamp | null;
 }
