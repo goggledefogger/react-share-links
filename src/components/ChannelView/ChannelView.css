@@ -185,3 +185,51 @@
 .dark .load-more-btn:hover {
   background-color: var(--primary-dark);
 }
+
+.channel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.channel-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-icon,
+.subscription-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  color: var(--text-color);
+  font-size: 1.2rem;
+  transition: color 0.2s ease;
+}
+
+.btn-icon:hover,
+.subscription-toggle:hover {
+  color: var(--primary-color);
+}
+
+.btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.subscription-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.subscription-toggle.subscribed {
+  color: var(--primary-color);
+}
+
+/* Add this if you want to keep the subscribed state visually different */
+.subscription-toggle.subscribed:hover {
+  color: var(--text-color);
+}

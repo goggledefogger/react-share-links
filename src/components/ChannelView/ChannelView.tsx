@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { useParams, Link as RouterLink } from "react-router-dom";
+import { useParams, Link as RouterLink, useNavigate } from "react-router-dom";
 import { useChannels } from "../../hooks/useChannels";
 import { useAuthUser } from "../../hooks/useAuthUser";
 import { Channel, Link } from "../../types";
@@ -26,6 +26,8 @@ import LinkItem from "../LinkItem/LinkItem";
 import { useToast } from "../../contexts/ToastContext";
 import LoadingSpinner from "../common/LoadingSpinner";
 import "./ChannelView.css";
+import { FaEdit, FaTrash, FaBell, FaBellSlash } from 'react-icons/fa';
+import { updateUserProfile } from "../../utils/userUtils"; // Adjust the import path as needed
 
 const LINKS_PER_PAGE = 20;
 
@@ -110,17 +112,27 @@ const useChannelData = (channelId: string | undefined) => {
 const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { channel, links, loading, error } = useChannelData(id);
-  const { addLink, deleteLink, addEmojiReaction, removeEmojiReaction } =
-    useChannels();
+  const { addLink, deleteLink, addEmojiReaction, removeEmojiReaction, updateChannel, deleteChannel } = useChannels();
   const { showToast } = useToast();
-  const { user } = useAuthUser();
+  const { user, profile } = useAuthUser();
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     linkId: string | null;
+    channelId: string | null;
   }>({
     isOpen: false,
     linkId: null,
+    channelId: null,
   });
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (profile && channel) {
+      setIsSubscribed(profile.subscribedChannels?.includes(channel.id) || false);
+    }
+  }, [profile, channel]);
 
   const handleAddLink = useCallback(
     async (formData: { [key: string]: string }) => {
@@ -146,7 +158,7 @@ const ChannelView: React.FC = () => {
     (linkId: string) => {
       const link = links.find((l) => l.id === linkId);
       if (link && link.userId === user?.uid) {
-        setDeleteConfirmation({ isOpen: true, linkId });
+        setDeleteConfirmation({ isOpen: true, linkId, channelId: null });
       } else {
         showToast({
           message: "You don't have permission to delete this link",
@@ -170,12 +182,12 @@ const ChannelView: React.FC = () => {
           type: "error",
         });
       }
-      setDeleteConfirmation({ isOpen: false, linkId: null });
+      setDeleteConfirmation({ isOpen: false, linkId: null, channelId: null });
     }
   }, [deleteConfirmation.linkId, deleteLink, showToast]);
 
   const handleDeleteCancel = useCallback(() => {
-    setDeleteConfirmation({ isOpen: false, linkId: null });
+    setDeleteConfirmation({ isOpen: false, linkId: null, channelId: null });
   }, []);
 
   const handleReact = useCallback(
@@ -205,6 +217,75 @@ const ChannelView: React.FC = () => {
     [removeEmojiReaction, user?.uid, showToast]
   );
 
+  const handleEditChannel = () => {
+    setIsEditing(true);
+  };
+
+  const handleUpdateChannel = async (formData: { [key: string]: string }) => {
+    if (id) {
+      try {
+        await updateChannel(id, formData.channelName);
+        showToast({ message: "Channel updated successfully", type: "success" });
+        setIsEditing(false);
+      } catch (error) {
+        console.error("Error updating channel:", error);
+        showToast({
+          message: error instanceof Error ? error.message : "Failed to update channel",
+          type: "error",
+        });
+      }
+    }
+  };
+
+  const handleDeleteChannel = () => {
+    if (id) {
+      setDeleteConfirmation({ isOpen: true, linkId: null, channelId: id });
+    }
+  };
+
+  const handleDeleteChannelConfirm = async () => {
+    if (deleteConfirmation.channelId) {
+      try {
+        await deleteChannel(deleteConfirmation.channelId);
+        showToast({ message: "Channel deleted successfully", type: "success" });
+        navigate('/');
+      } catch (error) {
+        console.error("Error deleting channel:", error);
+        showToast({
+          message: error instanceof Error ? error.message : "Failed to delete channel",
+          type: "error",
+        });
+      }
+      setDeleteConfirmation({ isOpen: false, linkId: null, channelId: null });
+    }
+  };
+
+  const handleSubscriptionToggle = async () => {
+    if (!user || !channel) return;
+
+    try {
+      const updatedSubscribedChannels = isSubscribed
+        ? profile?.subscribedChannels?.filter(id => id !== channel.id) || []
+        : [...(profile?.subscribedChannels || []), channel.id];
+
+      await updateUserProfile(user.uid, {
+        subscribedChannels: updatedSubscribedChannels,
+      });
+
+      setIsSubscribed(!isSubscribed);
+      showToast({
+        message: isSubscribed ? "Unsubscribed from channel" : "Subscribed to channel",
+        type: "success",
+      });
+    } catch (error) {
+      console.error("Error toggling subscription:", error);
+      showToast({
+        message: "Failed to update subscription",
+        type: "error",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -223,7 +304,47 @@ const ChannelView: React.FC = () => {
 
   return (
     <div className="channel-view">
-      <h2 className="channel-title">Channel: {channel.name}</h2>
+      <div className="channel-header">
+        {isEditing ? (
+          <Form
+            fields={[
+              {
+                name: "channelName",
+                type: "text",
+                placeholder: "Channel name",
+                required: true,
+                defaultValue: channel.name,
+              },
+            ]}
+            onSubmit={handleUpdateChannel}
+            submitButtonText="Update"
+            submitButtonClass="btn btn-primary"
+          />
+        ) : (
+          <>
+            <h2 className="channel-title">Channel: {channel.name}</h2>
+            <div className="channel-actions">
+              <button
+                className={`subscription-toggle ${isSubscribed ? 'subscribed' : ''}`}
+                onClick={handleSubscriptionToggle}
+                title={isSubscribed ? "Unsubscribe" : "Subscribe"}
+              >
+                {isSubscribed ? <FaBell /> : <FaBellSlash />}
+              </button>
+              {channel.createdBy === user?.uid && (
+                <>
+                  <button className="btn-icon" onClick={handleEditChannel} title="Edit Channel">
+                    <FaEdit />
+                  </button>
+                  <button className="btn-icon" onClick={handleDeleteChannel} title="Delete Channel">
+                    <FaTrash />
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
       <RouterLink to="/" className="back-link">
         Back to Channels
       </RouterLink>
@@ -260,8 +381,10 @@ const ChannelView: React.FC = () => {
 
       <ConfirmDialog
         isOpen={deleteConfirmation.isOpen}
-        message="Are you sure you want to delete this link?"
-        onConfirm={handleDeleteConfirm}
+        message={deleteConfirmation.channelId
+          ? "Are you sure you want to delete this channel? This action cannot be undone."
+          : "Are you sure you want to delete this link?"}
+        onConfirm={deleteConfirmation.channelId ? handleDeleteChannelConfirm : handleDeleteConfirm}
         onCancel={handleDeleteCancel}
       />
     </div>
