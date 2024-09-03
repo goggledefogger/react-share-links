@@ -1,6 +1,13 @@
-export function formatRelativeTime(timestamp: number): string {
+import { Timestamp, FieldValue } from "firebase/firestore";
+
+export function formatRelativeTime(timestamp: number | Timestamp | FieldValue): string {
+  if (timestamp instanceof FieldValue) {
+    // For newly created items with serverTimestamp, show "Just now"
+    return 'Just now';
+  }
+
   const now = new Date();
-  const date = new Date(timestamp);
+  const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   const diffWeeks = Math.floor(diffDays / 7);

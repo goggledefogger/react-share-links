@@ -4,6 +4,7 @@ import { Client } from "node-mailjet";
 import { getLinkPreview } from "link-preview-js";
 import { getYoutubeVideoId, isYoutubeUrl } from "./utils/youtubeUtils";
 import { getUsernameById } from "./utils/userUtils";
+import { Timestamp } from "firebase-admin/firestore";
 
 admin.initializeApp();
 
@@ -21,7 +22,7 @@ interface Link {
   channelId: string;
   userId: string;
   url: string;
-  createdAt: number | admin.firestore.Timestamp;
+  createdAt: Timestamp;
   preview?: LinkPreview;
 }
 
@@ -148,11 +149,8 @@ async function generateDigestContent(userId: string, daysAgo: number) {
       return null;
     }
 
-    const now = admin.firestore.Timestamp.now();
-
-    const cutoffDate = admin.firestore.Timestamp.fromMillis(
-      now.toMillis() - daysAgo * 24 * 60 * 60 * 1000
-    );
+    const now = Timestamp.now();
+    const cutoffDate = Timestamp.fromMillis(now.toMillis() - daysAgo * 24 * 60 * 60 * 1000);
     console.log("Current time:", now.toDate().toISOString());
     console.log("Cutoff date:", cutoffDate.toDate().toISOString());
 
@@ -240,10 +238,9 @@ async function generateDigestContent(userId: string, daysAgo: number) {
     for (const linkDoc of linksSnapshot.docs) {
       const link = linkDoc.data();
       const channelName = channelMap.get(link.channelId) || "Unknown Channel";
-      const createdAt =
-        link.createdAt instanceof admin.firestore.Timestamp ?
-          link.createdAt.toDate() :
-          new Date(link.createdAt);
+      const createdAt = link.createdAt instanceof Timestamp ?
+        link.createdAt.toDate() :
+        new Date(link.createdAt);
 
       const username = usernameMap.get(link.userId) || "Unknown User";
       console.log(`Using username '${username}' for user ${link.userId}`);
@@ -342,7 +339,7 @@ export const sendNewLinkNotification = functions.firestore
     console.log("New link created:", JSON.stringify({
       linkId,
       channelId,
-      createdAt: newLink.createdAt instanceof admin.firestore.Timestamp ?
+      createdAt: newLink.createdAt instanceof Timestamp ?
         newLink.createdAt.toDate().toISOString() :
         new Date(newLink.createdAt).toISOString(),
     }));

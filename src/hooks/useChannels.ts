@@ -16,6 +16,9 @@ import {
   startAfter,
   arrayUnion,
   arrayRemove,
+  serverTimestamp,
+  FieldValue,
+  Timestamp,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, auth, functions } from "../lib/firebase"; // Add functions to the import
@@ -23,6 +26,19 @@ import { Channel, Link } from "../types";
 
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 2000; // 2 seconds
+
+const handleCreatedAt = (createdAt: any): Timestamp => {
+  if (createdAt instanceof Timestamp) {
+    return createdAt;
+  } else if (typeof createdAt === 'number') {
+    return Timestamp.fromMillis(createdAt);
+  } else if (createdAt && typeof createdAt.toDate === 'function') {
+    return Timestamp.fromDate(createdAt.toDate());
+  } else {
+    console.error('Invalid createdAt format:', createdAt);
+    return Timestamp.now(); // Fallback to current time
+  }
+};
 
 export function useChannels() {
   const [channelList, setChannelList] = useState<Channel[]>([]);
@@ -39,7 +55,11 @@ export function useChannels() {
       const q = query(channelsCollection, orderBy("createdAt", "desc"));
       const snapshot = await getDocs(q);
       const updatedChannels = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as Channel)
+        (doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: handleCreatedAt(doc.data().createdAt)
+        } as Channel)
       );
       setChannelList(updatedChannels);
       setRetryCount(0); // Reset retry count on successful fetch
@@ -65,7 +85,12 @@ export function useChannels() {
     try {
       const channelDoc = await getDoc(doc(db, "channels", channelId));
       if (channelDoc.exists()) {
-        return { id: channelDoc.id, ...channelDoc.data() } as Channel;
+        const data = channelDoc.data();
+        return {
+          id: channelDoc.id,
+          ...data,
+          createdAt: handleCreatedAt(data.createdAt)
+        } as Channel;
       }
       return null;
     } catch (error) {
@@ -126,7 +151,7 @@ export function useChannels() {
       const newChannel = {
         name: channelName.trim(),
         createdBy: user.uid,
-        createdAt: Date.now(),
+        createdAt: serverTimestamp(),
       };
       const docRef = await addDoc(collection(db, "channels"), newChannel);
 
@@ -176,7 +201,7 @@ export function useChannels() {
         channelId,
         userId: user.uid,
         url,
-        createdAt: Date.now(),
+        createdAt: serverTimestamp() as FieldValue, // Use serverTimestamp here
         reactions: [],
         preview: null, // Add a default value for preview
       };

@@ -7,6 +7,7 @@ const node_mailjet_1 = require("node-mailjet");
 const link_preview_js_1 = require("link-preview-js");
 const youtubeUtils_1 = require("./utils/youtubeUtils");
 const userUtils_1 = require("./utils/userUtils");
+const firestore_1 = require("firebase-admin/firestore");
 admin.initializeApp();
 const LINK_PREVIEW_TIMEOUT = 10000; // 10 seconds
 const apiKey = functions.config().mailjet.api_key;
@@ -94,8 +95,8 @@ async function generateDigestContent(userId, daysAgo) {
             console.log(`User ${userId} has no subscribed channels`);
             return null;
         }
-        const now = admin.firestore.Timestamp.now();
-        const cutoffDate = admin.firestore.Timestamp.fromMillis(now.toMillis() - daysAgo * 24 * 60 * 60 * 1000);
+        const now = firestore_1.Timestamp.now();
+        const cutoffDate = firestore_1.Timestamp.fromMillis(now.toMillis() - daysAgo * 24 * 60 * 60 * 1000);
         console.log("Current time:", now.toDate().toISOString());
         console.log("Cutoff date:", cutoffDate.toDate().toISOString());
         const linksQuery = admin
@@ -144,7 +145,7 @@ async function generateDigestContent(userId, daysAgo) {
         for (const linkDoc of linksSnapshot.docs) {
             const link = linkDoc.data();
             const channelName = channelMap.get(link.channelId) || "Unknown Channel";
-            const createdAt = link.createdAt instanceof admin.firestore.Timestamp ?
+            const createdAt = link.createdAt instanceof firestore_1.Timestamp ?
                 link.createdAt.toDate() :
                 new Date(link.createdAt);
             const username = usernameMap.get(link.userId) || "Unknown User";
@@ -228,7 +229,7 @@ exports.sendNewLinkNotification = functions.firestore
     console.log("New link created:", JSON.stringify({
         linkId,
         channelId,
-        createdAt: newLink.createdAt instanceof admin.firestore.Timestamp ?
+        createdAt: newLink.createdAt instanceof firestore_1.Timestamp ?
             newLink.createdAt.toDate().toISOString() :
             new Date(newLink.createdAt).toISOString(),
     }));

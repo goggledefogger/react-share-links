@@ -3,7 +3,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
-import { setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
 import { useToast } from '../../contexts/ToastContext';
 import Form from '../common/Form';
@@ -40,7 +40,7 @@ const Auth: React.FC = () => {
           {
             username: username || email.split('@')[0],
             email: user.email,
-            createdAt: new Date().toISOString(),
+            createdAt: serverTimestamp(),
           },
           { merge: true }
         );
@@ -70,7 +70,7 @@ const Auth: React.FC = () => {
       required: true,
     },
     ...(isSignUp
-      ? [{ name: 'username', type: 'text', placeholder: 'Username (optional)' }]
+      ? [{ name: 'username', type: 'text', placeholder: 'Username' }]
       : []),
   ];
 
