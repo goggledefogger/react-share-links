@@ -684,4 +684,64 @@ export const deleteChannel = functions.https.onCall(async (data, context) => {
   }
 });
 
+export const shareLinkViaEmail = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "The function must be called while authenticated."
+    );
+  }
+
+  const { linkId, recipientEmail } = data;
+  const userId = context.auth.uid;
+
+  try {
+    const db = admin.firestore();
+
+    // Fetch the link data
+    const linkDoc = await db.collection("links").doc(linkId).get();
+    if (!linkDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Link not found");
+    }
+    const linkData = linkDoc.data() as Link;
+
+    // Fetch the sender's username
+    const senderUsername = await getUsernameById(userId);
+
+    // Fetch the user document to get the email
+    const userDoc = await db.collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "User not found");
+    }
+    const userData = userDoc.data();
+    const senderEmail = userData?.email;
+
+    if (!senderEmail) {
+      throw new functions.https.HttpsError("internal", "Sender email not found");
+    }
+
+    // Prepare the email content
+    const templateContent = {
+      senderUsername,
+      senderEmail,
+      recipientEmail,
+      linkUrl: linkData.url,
+      linkTitle: linkData.preview?.title || linkData.url,
+      linkDescription: linkData.preview?.description || "",
+      linkImage: linkData.preview?.image || "",
+    };
+
+    const templateId = functions.config().mailjet.share_with_email_template_id;
+    const subject = `${senderUsername} shared a link with you`;
+
+    // Send the email
+    await sendEmail(recipientEmail, recipientEmail, subject, templateContent, templateId);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in shareLinkViaEmail:", error);
+    throw new functions.https.HttpsError("internal", "An error occurred while sharing the link");
+  }
+});
+
 export { sendEmail };

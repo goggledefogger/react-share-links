@@ -2,13 +2,14 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, Reaction } from '../../types';
 import { useAuthUser } from '../../hooks/useAuthUser';
 import { useChannels } from '../../hooks/useChannels';
-import { FaUser, FaClock, FaLink, FaSmile, FaTrash } from 'react-icons/fa';
+import { FaUser, FaClock, FaLink, FaSmile, FaTrash, FaShare } from 'react-icons/fa';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import LoadingSpinner from '../common/LoadingSpinner';
 import EmojiPicker, { EmojiClickData, Theme, EmojiStyle } from 'emoji-picker-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import './LinkItem.css';
 import Tooltip from '../common/Tooltip'; // You'll need to create this component
+import ShareLinkViaEmail from '../ShareLinkViaEmail/ShareLinkViaEmail';
 
 interface LinkItemProps {
   link: Link;
@@ -35,6 +36,7 @@ const LinkItem: React.FC<LinkItemProps> = ({
   const emojiTheme: Theme = theme === 'dark' ? Theme.DARK : Theme.LIGHT;
   const emojiStyle: EmojiStyle = EmojiStyle.APPLE;
   const [activeEmojiPickerId, setActiveEmojiPickerId] = useState<string | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   useEffect(() => {
     if (link.preview) {
@@ -69,9 +71,19 @@ const LinkItem: React.FC<LinkItemProps> = ({
   }, [link.userId, getUsernameById]);
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!(e.target as HTMLElement).closest('.link-actions')) {
+    const target = e.target as HTMLElement;
+    if (
+      !target.closest('.link-actions') &&
+      !target.closest('.link-reactions') &&
+      !target.closest('.share-link-modal')
+    ) {
       window.open(link.url, '_blank', 'noopener,noreferrer');
     }
+  };
+
+  const handleShareClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setIsShareModalOpen(true);
   };
 
   const handleEmojiClick = (emojiData: EmojiClickData, event: MouseEvent) => {
@@ -160,6 +172,9 @@ const LinkItem: React.FC<LinkItemProps> = ({
           </a>
         </div>
         <div className="link-actions">
+          <button onClick={handleShareClick} className="share-button">
+            <FaShare />
+          </button>
           <div className="emoji-button-container">
             <button
               ref={emojiButtonRef}
@@ -239,6 +254,14 @@ const LinkItem: React.FC<LinkItemProps> = ({
           ))}
         </div>
       </div>
+      {isShareModalOpen && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <ShareLinkViaEmail
+            linkId={link.id}
+            onClose={() => setIsShareModalOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendEmail = exports.deleteChannel = exports.sendNewLinkNotification = exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
+exports.sendEmail = exports.shareLinkViaEmail = exports.deleteChannel = exports.sendNewLinkNotification = exports.sendDailyDigest = exports.sendWeeklyDigest = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const node_mailjet_1 = require("node-mailjet");
@@ -480,6 +480,54 @@ exports.deleteChannel = functions.https.onCall(async (data, context) => {
     catch (error) {
         console.error(`Error in deleteChannel for channel ${channelId}:`, error);
         throw new functions.https.HttpsError("internal", "An error occurred while deleting the channel");
+    }
+});
+exports.shareLinkViaEmail = functions.https.onCall(async (data, context) => {
+    var _a, _b, _c;
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+    const { linkId, recipientEmail } = data;
+    const userId = context.auth.uid;
+    try {
+        const db = admin.firestore();
+        // Fetch the link data
+        const linkDoc = await db.collection("links").doc(linkId).get();
+        if (!linkDoc.exists) {
+            throw new functions.https.HttpsError("not-found", "Link not found");
+        }
+        const linkData = linkDoc.data();
+        // Fetch the sender's username
+        const senderUsername = await (0, userUtils_1.getUsernameById)(userId);
+        // Fetch the user document to get the email
+        const userDoc = await db.collection("users").doc(userId).get();
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError("not-found", "User not found");
+        }
+        const userData = userDoc.data();
+        const senderEmail = userData === null || userData === void 0 ? void 0 : userData.email;
+        if (!senderEmail) {
+            throw new functions.https.HttpsError("internal", "Sender email not found");
+        }
+        // Prepare the email content
+        const templateContent = {
+            senderUsername,
+            senderEmail,
+            recipientEmail,
+            linkUrl: linkData.url,
+            linkTitle: ((_a = linkData.preview) === null || _a === void 0 ? void 0 : _a.title) || linkData.url,
+            linkDescription: ((_b = linkData.preview) === null || _b === void 0 ? void 0 : _b.description) || "",
+            linkImage: ((_c = linkData.preview) === null || _c === void 0 ? void 0 : _c.image) || "",
+        };
+        const templateId = functions.config().mailjet.share_with_email_template_id;
+        const subject = `${senderUsername} shared a link with you`;
+        // Send the email
+        await sendEmail(recipientEmail, recipientEmail, subject, templateContent, templateId);
+        return { success: true };
+    }
+    catch (error) {
+        console.error("Error in shareLinkViaEmail:", error);
+        throw new functions.https.HttpsError("internal", "An error occurred while sharing the link");
     }
 });
 //# sourceMappingURL=index.js.map
