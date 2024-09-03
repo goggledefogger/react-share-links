@@ -381,7 +381,7 @@ export const sendNewLinkNotification = functions.firestore
       updatedLink = newLink;
     }
 
-    const creatorUsername = await getUsernameById(newLink.userId);
+    const linkUsername = await getUsernameById(newLink.userId);
 
     for (const userDoc of usersSnapshot.docs) {
       const user = userDoc.data();
@@ -393,7 +393,7 @@ export const sendNewLinkNotification = functions.firestore
           linkTitle: updatedLink.preview?.title || updatedLink.url,
           linkDescription: updatedLink.preview?.description || "",
           linkImage: updatedLink.preview?.image || "",
-          creatorUsername: creatorUsername,
+          linkUsername: linkUsername,
         };
 
         console.log("Template content for new link notification:",

@@ -263,7 +263,7 @@ exports.sendNewLinkNotification = functions.firestore
     if (!updatedLink || !updatedLink.preview) {
         updatedLink = newLink;
     }
-    const creatorUsername = await (0, userUtils_1.getUsernameById)(newLink.userId);
+    const linkUsername = await (0, userUtils_1.getUsernameById)(newLink.userId);
     for (const userDoc of usersSnapshot.docs) {
         const user = userDoc.data();
         if (user.email && user.emailNotifications !== false) {
@@ -274,7 +274,7 @@ exports.sendNewLinkNotification = functions.firestore
                 linkTitle: ((_b = updatedLink.preview) === null || _b === void 0 ? void 0 : _b.title) || updatedLink.url,
                 linkDescription: ((_c = updatedLink.preview) === null || _c === void 0 ? void 0 : _c.description) || "",
                 linkImage: ((_d = updatedLink.preview) === null || _d === void 0 ? void 0 : _d.image) || "",
-                creatorUsername: creatorUsername,
+                linkUsername: linkUsername,
             };
             console.log("Template content for new link notification:", JSON.stringify(templateContent, null, 2));
             const templateId = functions.config().mailjet.new_link_email_template_id;
