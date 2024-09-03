@@ -112,7 +112,7 @@ const useChannelData = (channelId: string | undefined) => {
 const ChannelView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { channel, links, loading, error } = useChannelData(id);
-  const { addLink, deleteLink, addEmojiReaction, removeEmojiReaction, updateChannel, deleteChannel } = useChannels();
+  const { addLink, deleteLink, addEmojiReaction, removeEmojiReaction, updateChannel, deleteChannel, isDeletingChannel } = useChannels();
   const { showToast } = useToast();
   const { user, profile } = useAuthUser();
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -126,6 +126,7 @@ const ChannelView: React.FC = () => {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -246,6 +247,7 @@ const ChannelView: React.FC = () => {
   const handleDeleteChannelConfirm = async () => {
     if (deleteConfirmation.channelId) {
       try {
+        setIsDeleting(true);
         await deleteChannel(deleteConfirmation.channelId);
         showToast({ message: "Channel deleted successfully", type: "success" });
         navigate('/');
@@ -255,8 +257,10 @@ const ChannelView: React.FC = () => {
           message: error instanceof Error ? error.message : "Failed to delete channel",
           type: "error",
         });
+      } finally {
+        setIsDeleting(false);
+        setDeleteConfirmation({ isOpen: false, linkId: null, channelId: null });
       }
-      setDeleteConfirmation({ isOpen: false, linkId: null, channelId: null });
     }
   };
 
@@ -387,6 +391,12 @@ const ChannelView: React.FC = () => {
         onConfirm={deleteConfirmation.channelId ? handleDeleteChannelConfirm : handleDeleteConfirm}
         onCancel={handleDeleteCancel}
       />
+
+      {(isDeleting || isDeletingChannel) && (
+        <div className="loading-overlay">
+          <LoadingSpinner size="large" />
+        </div>
+      )}
     </div>
   );
 };
