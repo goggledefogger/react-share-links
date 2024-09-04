@@ -8,6 +8,11 @@ An application for sharing links. Simple and sweet, don't worry about comments.
 - Create channels for topics or groups. Like a hashtag or group message but less lame
 - No need for comments or replies. Just an emoji if you want, emojis are better than words sometimes anyway
 - Automatic link preview fetching, including enhanced support for YouTube links
+- User authentication and profile management
+- Channel subscriptions and email notifications
+- Daily/Weekly Digest emails
+- Responsive design for mobile and desktop
+- Dark mode support
 
 ## Tech Stack
 
@@ -66,7 +71,10 @@ An application for sharing links. Simple and sweet, don't worry about comments.
      {
        "mailjet": {
          "api_key": "your_mailjet_api_key",
-         "api_secret": "your_mailjet_api_secret"
+         "api_secret": "your_mailjet_api_secret",
+         "test_template_id": "your_test_template_id",
+         "digest_email_template_id": "your_digest_template_id",
+         "new_link_email_template_id": "your_new_link_template_id"
        },
        "youtube": {
          "api_key": "your_youtube_data_api_key"
@@ -89,6 +97,36 @@ An application for sharing links. Simple and sweet, don't worry about comments.
    pnpm start
    ```
 
+## Development Setup
+
+1. Install Node.js (version 20 or later) and pnpm.
+
+2. Install the Firebase CLI globally:
+   ```
+   npm install -g firebase-tools
+   ```
+
+3. Log in to Firebase:
+   ```
+   firebase login
+   ```
+
+4. Set up Firebase emulators for local development:
+   ```
+   firebase init emulators
+   ```
+   Select Firestore, Functions, and Hosting emulators.
+
+5. Start the emulators:
+   ```
+   firebase emulators:start
+   ```
+
+6. In a separate terminal, start the React development server:
+   ```
+   pnpm start
+   ```
+
 ## Testing
 
 To test the frontend, run in the root directory:
@@ -103,17 +141,12 @@ pnpm test:functions
 
 ## Deployment
 
-1. Build the React app:
-   ```
-   pnpm run build
-   ```
-
-2. Deploy to Firebase:
+Deploy to Firebase:
    ```
    firebase deploy
    ```
 
-   This will deploy both the frontend and the Firebase Functions. The configuration values you imported from `.runtimeconfig.json` will be used by the deployed functions.
+   This will create a production build and deploy the frontend, the Firebase Functions and config, Firestore indexes and rules. The configuration values you imported from `.runtimeconfig.json` will be used by the deployed functions.
 
 ## Firebase Functions
 
