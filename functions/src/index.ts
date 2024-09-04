@@ -740,12 +740,14 @@ export const shareLinkViaEmail = functions.https.onCall(async (data, context) =>
       throw new functions.https.HttpsError("internal", "Sender email not found");
     }
 
+    const sharedLinkUrl = `${functions.config().app.url}/sharedLink/${linkId}`;
+
     // Prepare the email content
     const templateContent = {
       senderUsername,
       senderEmail,
       recipientEmail,
-      linkUrl: linkData.url,
+      linkUrl: sharedLinkUrl, // Use the new shared link URL
       linkTitle: linkData.preview?.title || linkData.url,
       linkDescription: linkData.preview?.description || "",
       linkImage: linkData.preview?.image || "",

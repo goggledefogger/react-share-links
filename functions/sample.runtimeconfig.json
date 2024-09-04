@@ -1,4 +1,7 @@
 {
+  "app": {
+    "url": "https://your-app-url.com"
+  },
   "mailjet": {
     "api_key": "YOUR_MAILJET_API_KEY",
     "api_secret": "YOUR_MAILJET_API_SECRET",

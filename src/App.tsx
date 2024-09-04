@@ -21,6 +21,7 @@ import './styles/animations.css';
 import './styles/mobile.css';
 import './App.css';
 import MobileMenu from './components/MobileMenu/MobileMenu';
+import SharedLinkLanding from './components/SharedLinkLanding/SharedLinkLanding';
 
 const AppContent: React.FC = () => {
   const { user, profile, signOutUser, loading } = useAuthUser();
@@ -122,6 +123,7 @@ const AppContent: React.FC = () => {
               path="/login"
               element={user ? <Navigate to="/" replace /> : <Auth />}
             />
+            <Route path="/sharedLink/:linkId" element={<SharedLinkLanding />} />
           </Routes>
         </div>
       </main>

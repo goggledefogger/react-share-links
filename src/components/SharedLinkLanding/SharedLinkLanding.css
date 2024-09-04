@@ -1,0 +1,32 @@
+.shared-link-landing {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.cta-container {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.cta-button {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.cta-button:hover {
+  background-color: var(--primary-dark);
+}
+
+.error-message {
+  color: var(--error-color);
+  text-align: center;
+  font-size: 18px;
+  margin-top: 20px;
+}

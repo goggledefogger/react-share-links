@@ -524,12 +524,13 @@ exports.shareLinkViaEmail = functions.https.onCall(async (data, context) => {
         if (!senderEmail) {
             throw new functions.https.HttpsError("internal", "Sender email not found");
         }
+        const sharedLinkUrl = `${functions.config().app.url}/sharedLink/${linkId}`;
         // Prepare the email content
         const templateContent = {
             senderUsername,
             senderEmail,
             recipientEmail,
-            linkUrl: linkData.url,
+            linkUrl: sharedLinkUrl,
             linkTitle: ((_a = linkData.preview) === null || _a === void 0 ? void 0 : _a.title) || linkData.url,
             linkDescription: ((_b = linkData.preview) === null || _b === void 0 ? void 0 : _b.description) || "",
             linkImage: ((_c = linkData.preview) === null || _c === void 0 ? void 0 : _c.image) || "",
